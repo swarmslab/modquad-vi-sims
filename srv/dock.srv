@@ -1,0 +1,7 @@
+bool dock_flag
+string dock_side
+float64 waitmod_yaw 
+string method
+uint8 target_ip
+---
+string state

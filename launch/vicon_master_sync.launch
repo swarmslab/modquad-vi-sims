@@ -1,0 +1,11 @@
+<launch>
+
+  <include file="$(find mocap_vicon)/launch/vicon.launch">
+  </include>
+
+  <include file="$(find modquad)/launch/master_sync.launch">
+  </include>
+
+  <!--node pkg="modquad" name="transang" type="trans_qua_to_angle.py" output="screen">
+  </node-->
+</launch>
