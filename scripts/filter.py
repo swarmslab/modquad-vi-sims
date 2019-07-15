@@ -24,9 +24,8 @@ class kalmanfilter:
         rospy.init_node('modquad' + self.ip_addr + 'filter')
         self.pub_and_sub_init()
         self.parameter_init()
-        #print "parameters initialized"
       
-        rate = rospy.Rate(100)  # Hz
+        rate = rospy.Rate(25)  # Hz
         rate.sleep()
 
         while not rospy.is_shutdown():
@@ -65,9 +64,6 @@ class kalmanfilter:
 
 
     def update(self,mu_bar,Sigma_bar,whycon_position,Imu):
-        #mu_bar =
-
-
         '''
         :param input: gravity + acceleration
         :param measure_position: quad position in the tag frame.
@@ -218,9 +214,7 @@ class kalmanfilter:
         self.R_cam_quad1 = np.matrix([[0, 0, 1], [-1, 0, 0], [0, -1, 0]])  # Simulation
 
         self.Vt = np.matrix(np.zeros((9, 3)))
-        #print "I am in the param init"
         while True:
-            #pdb.set_trace()
             if self.image_updated:
                 tag_vector = np.matrix([self.whycon_position.poses[0].position.x, self.whycon_position.poses[0].position.y,
                                         self.whycon_position.poses[0].position.z]).transpose()

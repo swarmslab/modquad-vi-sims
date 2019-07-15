@@ -48,14 +48,14 @@ class modquad:
         self.pos_control_param_init()
         self.track_control_param_init()
         self.quadrotor_physical_parameter(num)
-        self.num = num
+        self.num = int(num)
 	self.total_robots_num = total_robots_num
         self.robot_list = rospy.get_param("robot_list") 
         self.SendWaypoint_Service = {}
         self.switch_control_hash_pub = {}
         self.joined_group_hash = {}
         self.set_control_hash = {}
-        self.joined_groups = [int(self.num)]
+        self.joined_groups = [self.num]
         '''
         ---------------------------------------Service initialization----------------------------------------------
         '''
@@ -71,8 +71,6 @@ class modquad:
         '''
 
         self.waypoint_pub = rospy.Publisher('/modquad'+num+'/waypoint', Waypoint, queue_size=10)
-        self.mavros_attitude_pub = rospy.Publisher('/mavros'+num+'/setpoint_raw/attitude', AttitudeTarget, queue_size=10)
-        self.mavros_thrust_pub = rospy.Publisher('/mavros'+num+'/setpoint_attitude/thrust', Thrust, queue_size=10)
 	self.docked_pub = rospy.Publisher('/modquad/modquad_docked', Bool, queue_size=10)
 	self.modquad_switch_control_pub = rospy.Publisher('/modquad' + num + '/switch_control', Bool, queue_size=10)
         '''
@@ -87,9 +85,9 @@ class modquad:
             rospy.logwarn("---- MODQUAD USING MOCAP ----")
             rospy.Subscriber('/mavros' + num + '/vision_pose/pose', PoseStamped, callback=self.pose_cb)
 
-        rospy.Subscriber('/modquad/whycon' + str(num) + '/poses',PoseArray,callback = self.vision_goal_cb)
-        rospy.Subscriber('/modquad' + str(num) + '/filtered_Vision_Odom',VisionOdom,callback = self.vision_odom_cb)
-        rospy.Subscriber('/mavros' + str(num) + '/imu/data',Imu,callback = self.Imu_cb)
+        rospy.Subscriber('/modquad/whycon' + num + '/poses',PoseArray,callback = self.vision_goal_cb)
+        rospy.Subscriber('/modquad' + num + '/filtered_Vision_Odom',VisionOdom,callback = self.vision_odom_cb)
+        rospy.Subscriber('/mavros' + num + '/imu/data',Imu,callback = self.Imu_cb)
 	rospy.Subscriber('/modquad/modquad_docked', Bool, callback = self.dock_state_cb)
 
         '''
@@ -238,7 +236,7 @@ class modquad:
             orien = self.curr_pose.pose.orientation
             euler = qua2eu([orien.x,orien.y,orien.z,orien.w],'sxyz')
             yaw = euler[2]
-            self.SendWaypoint_Service[int(self.num)](self.curr_pose.pose.position.x - 0.5, self.curr_pose.pose.position.y, self.curr_pose.pose.position.z,yaw)
+            self.SendWaypoint_Service[self.num](self.curr_pose.pose.position.x - 0.5, self.curr_pose.pose.position.y, self.curr_pose.pose.position.z,yaw)
             return trackResponse('Disabling track and rejecting tracking trajectory initialization')
 
     '''
@@ -382,7 +380,7 @@ class modquad:
 
 	Imu_norm = np.linalg.norm(self.Imu_queue, 2)
 
-	if curr_odom[2] < 0.04 and Imu_norm > 2.1: #2.1 is arbitrary
+	if curr_odom[2] < 0.2 and Imu_norm > 2.1: #2.1 is arbitrary, but looking for IMU jump when z distance is less than 20cm
 		dock_state = True
 	else:
 		dock_state = False
@@ -417,8 +415,8 @@ class modquad:
 	
     def pub_docked_state_to_px4(self,dock_state):
         if dock_state:
-            self.set_control_hash[int(self.num)].publish(CooperativeControl(-1.0,-1.0,-1.0,-1.0,True))
+            self.set_control_hash[self.num].publish(CooperativeControl(-1.0,-1.0,-1.0,-1.0,True))
             self.set_control_hash[int(self.target_ip)].publish(CooperativeControl(1.0,1.0,1.0,1.0,True))
         else:
-            self.set_control_hash[int(self.num)].publish(CooperativeControl(1.0,-1.0,1.0,-1.0,True))
+            self.set_control_hash[self.num].publish(CooperativeControl(1.0,-1.0,1.0,-1.0,True))
             rospy.loginfo("The modules are not docked yet, fail to change control.")

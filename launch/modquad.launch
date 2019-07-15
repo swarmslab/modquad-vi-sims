@@ -12,7 +12,7 @@
     <param name="Environment" type="string" value="$(arg Environment)"/>
     <param name="RobotsNumber"  value="2"/>
     <param name="module_mass" value="0.04200"/>
-    <rosparam param="robot_list">[101,102]</rosparam>
+    <rosparam param="robot_list">[101]</rosparam>
 
     <node pkg="modquad" name="$(arg modquad_name)" type="pos_control.py" output="screen">
     </node>

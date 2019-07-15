@@ -70,36 +70,27 @@ mavros_extras/src/plugins/modquad_control.cpp, which then calls on modquad_contr
 
 ------------------------------------------------------
 
-Overall, the complete path is:
+For developers, the complete path the program takes is:
 
 big_modquad/.../pos_control.py -> 
 
 big_modquad/.../modquad_init.py -> 
 
 mavros_extras/.../modquad_control.cpp ->
-Done! 
+
 For testing: publish mavros_msgs/Cooperative_control msg to /mavros/modquad_control/control_flag
-rostopic pub -r 1 /mavros/modquad_control/control_flag mavros_msgs/Cooperative_control  '{x_plusd: 1.0, x_minusd: 1.0, y_plusd: 1.0, y_minusd: 1.0, x: 0.0, y: 0.0, control_flag: true}'
+rostopic pub -r 1 /mavros/modquad_control/control_flag mavros_msgs/CooperativeControl  '{x_plusd: 1.0, x_minusd: 1.0, y_plusd: 1.0, y_minusd: 1.0, x: 0.0, y: 0.0, control_flag: true}'
 
 modQuadFirmware/.../px4io.cpp -> 
-Done!
 
 modQuadFirmware/.../mixer_multirotor.cpp
-Done! (SEEMS GOOD IN TESTING, NEEDS TESTING ON ACTUAL QUAD)
-
 
 P.S.: For complete description of modquad_control_msg, check out the last lines of 
 mavlink/message_definitions/v1.0/common.xml
 
 ------------------------------------------------------
 
-check_tag_detection() ->
-check_dock_flag() ->
-check_track_flag() ->
+___EXTREMELY IMPORTANT NOTE___
 
-run_dock_detector() ->
-	dock_detector() -> 
-	docked_pub.publish() -> 
-	subscribe to /modquad/modquad_docked -> 
-	dock_state_cb ->
-check_dock_state() ->
+There is a bug in MAVROS where if the RPi's CPU is too overloaded, it will throw the error "CRITICAL NAVIGATION FAILURE - CHECK SENSOR CALIBR". Note that this is NOT a sensor calibration error. Most likely the Raspberry Pi cannot tend to MAVROS' needs on time due to the high BPS. If this error persists, attempt lowering CPU usage either by lowering camera resolution, lowering BPS to PX4, or removing modules from px4_pluginlists.yaml.
+

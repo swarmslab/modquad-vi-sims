@@ -56,9 +56,6 @@ class position_control:
         rospy.wait_for_service('/modquad/modquad'+num+'/join_groups')
         Join_Group_Service = rospy.ServiceProxy('modquad'+num+'/join_groups', set_group)
         	
-        time_init = 0.0
-        yaw_des = 0.0
-
 	docked = False
         dock_flag = False
 	docked_state = False
@@ -160,7 +157,7 @@ class position_control:
 
                 else: 
 		#this is the case for sending a waypoint to a single quad
-                    pose = self.modquad_func_lib.get_current_pose()
+                    #pose = self.modquad_func_lib.get_current_pose()
                     #vel = self.modquad_func_lib.get_current_vel() #I'm pretty sure we don't need velocity
 
                     actual_waypoint = PoseStamped()
