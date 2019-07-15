@@ -139,7 +139,6 @@ class modquad:
         mass in simulation: self.m = 0.0625
         '''
         self.m = rospy.get_param("module_mass")
-	rospy.loginfo(self.m)
         self.g = 9.81
         self.H_cam_quad1 = np.matrix([[0,0,1,0.106],[-1,0,0,0],[0,-1,0,0.07],[0,0,0,1]])
 
@@ -352,7 +351,7 @@ class modquad:
         dock_position.y = r_tag_local[1]
         dock_position.z = r_tag_local[2]
         dock_position.updated = True
-        print dock_position
+        #print dock_position
         return dock_position
 
     def get_joined_groups(self):
@@ -371,9 +370,12 @@ class modquad:
 	#pos_x  = curr_odom[0]
 	#pos_y  = curr_odom[1]
 	#pos_z  = curr_odom[2]
-	jump = np.sqrt(curr_Imu.linear_acceleration.x**2 
-		+ curr_Imu.linear_acceleration.y**2
-		+ (curr_Imu.linear_acceleration.z - 9.81)**2)
+        try:  
+               jump = np.sqrt(curr_Imu.linear_acceleration.x**2 
+                       + curr_Imu.linear_acceleration.y**2
+                       + (curr_Imu.linear_acceleration.z - 9.81)**2)
+        except OverflowError:
+               jump = 0
 
 	np.roll(self.Imu_queue, 1)
 	self.Imu_queue[0] = jump

@@ -24,7 +24,7 @@ class kalmanfilter:
         rospy.init_node('modquad' + self.ip_addr + 'filter')
         self.pub_and_sub_init()
         self.parameter_init()
-        print "parameters initialized"
+        #print "parameters initialized"
       
         rate = rospy.Rate(100)  # Hz
         rate.sleep()
@@ -218,8 +218,7 @@ class kalmanfilter:
         self.R_cam_quad1 = np.matrix([[0, 0, 1], [-1, 0, 0], [0, -1, 0]])  # Simulation
 
         self.Vt = np.matrix(np.zeros((9, 3)))
-        print "I am in the param init"
-        #pdb.set_trace()
+        #print "I am in the param init"
         while True:
             #pdb.set_trace()
             if self.image_updated:
