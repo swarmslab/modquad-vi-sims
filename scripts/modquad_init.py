@@ -236,7 +236,7 @@ class modquad:
             orien = self.curr_pose.pose.orientation
             euler = qua2eu([orien.x,orien.y,orien.z,orien.w],'sxyz')
             yaw = euler[2]
-            self.SendWaypoint_Service[self.num](self.curr_pose.pose.position.x - 0.5, self.curr_pose.pose.position.y, self.curr_pose.pose.position.z,yaw)
+            self.SendWaypoint_Service[self.num](self.curr_pose.pose.position.x - 0.5, self.curr_pose.pose.position.y, self.curr_pose.pose.position.z + 0.2,yaw)
             return trackResponse('Disabling track and rejecting tracking trajectory initialization')
 
     '''

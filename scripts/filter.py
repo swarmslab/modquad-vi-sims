@@ -25,7 +25,7 @@ class kalmanfilter:
         self.pub_and_sub_init()
         self.parameter_init()
       
-        rate = rospy.Rate(25)  # Hz
+        rate = rospy.Rate(40)  # Hz
         rate.sleep()
 
         while not rospy.is_shutdown():

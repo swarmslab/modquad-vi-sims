@@ -96,8 +96,8 @@ class position_control:
                                                       PositionTarget.IGNORE_AFZ
                             start_point = self.modquad_func_lib.get_start_position_tag_frame()
                             dock_waypoint.position.x = self.gps_pose.pose.position.x - start_point.position.x
-                            dock_waypoint.position.y = self.gps_pose.pose.position.y + start_point.position.y
-                            dock_waypoint.position.z = self.gps_pose.pose.position.z + start_point.position.z
+                            dock_waypoint.position.y = self.gps_pose.pose.position.y - start_point.position.y
+                            dock_waypoint.position.z = self.gps_pose.pose.position.z - start_point.position.z
                             dock_waypoint.velocity = Vector3(0.1, 0.1, 0.1)
                             quat = self.gps_pose.pose.orientation
                             dock_waypoint.yaw = euler_from_quaternion([quat.x,
@@ -124,14 +124,46 @@ class position_control:
 
             elif track_flag&(not dock_flag)&tag_detected:
                 rospy.loginfo("The tag is detected and the quad starts to track")
+                
                 track_waypoint = PoseStamped()
                 track_waypoint.header.stamp = rospy.get_rostime()
                 track_waypoint.header.frame_id = "map"
-		#TODO: generalize here for back, right, and left tags
+		#TODO: generalize here for back, right, and left tags, this means also for the np.sign!!!!!!!!!!!!!!!!!!!!
                 start_point = self.modquad_func_lib.get_start_position_tag_frame()
-                track_waypoint.pose.position.x = self.gps_pose.pose.position.x - start_point.position.x - 1.0
-                track_waypoint.pose.position.y = self.gps_pose.pose.position.y + start_point.position.y
-                track_waypoint.pose.position.z = self.gps_pose.pose.position.z + start_point.position.z
+                dist = start_point.position.x
+                track_waypoint.pose.position.x = self.gps_pose.pose.position.x - dist + np.sign(dist)*1.0
+                track_waypoint.pose.position.y = self.gps_pose.pose.position.y #+ start_point.position.y
+                track_waypoint.pose.position.z = self.gps_pose.pose.position.z - start_point.position.z - 0.035 - 0.2
+                #tag height from EKF is height of camera relative to tag
+                #e.g. negative height means camera is below tag
+                '''
+                dock_waypoint = PositionTarget()
+                dock_waypoint.header.stamp = rospy.get_rostime()
+                dock_waypoint.header.frame_id = "map"
+                dock_waypoint.coordinate_frame = PositionTarget.FRAME_BODY_NED
+                dock_waypoint.type_mask = PositionTarget.IGNORE_YAW_RATE | \
+                                          PositionTarget.IGNORE_YAW | \
+                                          PositionTarget.IGNORE_AFX | \
+                                          PositionTarget.IGNORE_AFY | \
+                                          PositionTarget.IGNORE_AFZ
+                start_point = self.modquad_func_lib.get_start_position_tag_frame()
+                dock_waypoint.position.x = self.gps_pose.pose.position.x - start_point.position.x +np.sign(start_point.position.x)
+                dock_waypoint.position.y = self.gps_pose.pose.position.y - start_point.position.y
+                dock_waypoint.position.z = self.gps_pose.pose.position.z - start_point.position.z -0.035
+                dock_waypoint.velocity = Vector3(0.08, 0.08, 0.08)
+                quat = self.gps_pose.pose.orientation
+                #dock_waypoint.yaw = euler_from_quaternion([quat.x,
+                #                                           quat.y,
+                #                                           quat.z,
+                #                                           quat.w])[2]
+                self.pose_vel_setpoint_pub.publish(dock_waypoint)
+                '''
+                print("--- VISION POSITION ---")
+                print(start_point.position)
+                print("--- QUAD LOCAL POSITION ---")
+                print(self.gps_pose.pose.position)
+                print("--- RESULTING POSITION ---")
+                print(track_waypoint.pose.position)
                 track_waypoint.pose.orientation = Quaternion(*quaternion_from_euler(0.0, 0.0, 0.0))
 		#generate trajectory for quad to go to position slightly behind the tag (getting ready for dock)
                 self.setpoint_pub.publish(track_waypoint)
