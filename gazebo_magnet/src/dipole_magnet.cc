@@ -223,7 +223,6 @@ void DipoleMagnet::PublishData(
     this->wrench_msg.wrench.torque.y = torque.Y();
     this->wrench_msg.wrench.torque.z = torque.Z();
 
-
     // now mfs
     this->mfs_msg.header.frame_id = this->link_name;
     this->mfs_msg.header.stamp.sec = cur_time.sec;
@@ -240,7 +239,6 @@ void DipoleMagnet::PublishData(
     this->lock.unlock();
   }
 }
-
 
 void DipoleMagnet::GetForceTorque(const ignition::math::Pose3d& p_self,
     const ignition::math::Vector3d& m_self,

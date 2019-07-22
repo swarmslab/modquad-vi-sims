@@ -92,7 +92,7 @@
     enable_visual="true"
     >
     <box size="0.01 0.01 0.01" />
-    <origin xyz="0.1 0.0 0.0" rpy="0.0 0.0 0.0" />
+    <origin xyz="0.15 0.0 0.05" rpy="0.0 0.0 0.0" />
   </xacro:camera_macro>
 
   <xacro:if value="$(arg enable_mavlink_interface)">

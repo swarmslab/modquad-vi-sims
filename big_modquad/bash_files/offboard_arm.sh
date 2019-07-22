@@ -8,4 +8,3 @@ read -n 1 -s
 rosrun mavros mavsafety -n modquad0/mavros0 arm
 rosrun mavros mavsafety -n modquad1/mavros1 arm
 echo "Now armed"
-

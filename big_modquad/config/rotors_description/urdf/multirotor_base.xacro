@@ -81,6 +81,56 @@
    </gazebo>
   </xacro:macro>
 
+  <xacro:macro name="prop_guard_macro"
+    params="robot_namespace mass body_width body_height mesh_scale *inertia">
+
+    <joint name="prop_guard_${robot_namespace}_joint" type="fixed">
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <parent link="base_link" />
+      <child link="prop_guard_${robot_namespace}" />
+    </joint>
+
+    <link name="prop_guard_${robot_namespace}">
+      <inertial>
+        <mass value="${mass}" />
+        <origin xyz="0 0 0" />
+        <xacro:insert_block name="inertia" />
+      </inertial>
+
+      <visual>
+        <origin xyz="0.27 -0.29 -0.22" rpy="1.57079632679 0 3.14159265359" />
+        <geometry>
+          <mesh filename="package://rotors_description/meshes/TMotorAssembly.STL"
+            scale="${mesh_scale}" />
+        </geometry>
+      </visual>
+
+      <collision>
+        <origin xyz="0 0 0" rpy="0 0 0" />
+        <geometry>
+          <box size="${body_width} ${body_width} ${body_height}" />
+        </geometry>
+      </collision>
+    </link>
+
+    <gazebo reference="prop_guard_${robot_namespace}">
+      <material>Gazebo/DarkGrey</material>
+      <collision name='prop_guard_${robot_namespace}_inertia_collision'>
+        <surface>
+          <contact>
+            <ode>
+              <min_depth>0.001</min_depth>
+              <max_vel>0.0</max_vel>
+            </ode>
+          </contact>
+          <friction>
+            <ode/>
+          </friction>
+        </surface>
+      </collision>
+   </gazebo>
+  </xacro:macro>
+
   <!-- Rotor joint and link -->
   <xacro:macro name="vertical_rotor"
     params="robot_namespace suffix direction motor_constant moment_constant parent mass_rotor radius_rotor time_constant_up time_constant_down max_rot_velocity motor_number rotor_drag_coefficient rolling_moment_coefficient color mesh mesh_scale *origin *inertia">

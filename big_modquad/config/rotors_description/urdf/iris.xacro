@@ -7,6 +7,7 @@
   <xacro:property name="mesh_file" value="iris.stl" />
   <xacro:property name="mesh_scale" value="1 1 1"/>
   <xacro:property name="mesh_scale_prop" value="1 1 1"/>
+  <xacro:property name="mesh_scale_guard" value="0.0025 0.0025 0.0025"/>
   <xacro:property name="mass" value="1.5" /> <!-- [kg] -->
   <xacro:property name="body_width" value="0.47" /> <!-- [m] -->
   <xacro:property name="body_height" value="0.11" /> <!-- [m] -->
@@ -34,6 +35,9 @@
     <inertia ixx="0.0347563" ixy="0.0" ixz="0.0" iyy="0.0458929" iyz="0.0" izz="0.0977" /> <!-- [kg.m^2] [kg.m^2] [kg.m^2] [kg.m^2] [kg.m^2] [kg.m^2] -->
   </xacro:property>
 
+  <xacro:property name="prop_guard_inertia">
+    <inertia ixx="0.009" ixy="0.0" ixz="0.0" iyy="0.00458929" iyz="0.0" izz="0.00977" /> <!-- [kg.m^2] [kg.m^2] [kg.m^2] [kg.m^2] [kg.m^2] [kg.m^2] -->
+  </xacro:property>
   <!-- inertia of a single rotor, assuming it is a cuboid. Height=3mm, width=15mm -->
   <xacro:property name="rotor_inertia">
     <inertia
@@ -58,6 +62,16 @@
     >
     <xacro:insert_block name="body_inertia" />
   </xacro:multirotor_base_macro>
+
+  <xacro:prop_guard_macro
+    robot_namespace="${namespace}"
+    mass="0.07"
+    body_width="${body_width + 0.08}"
+    body_height="${body_height + 0.06}"
+    mesh_scale="${mesh_scale_guard}"
+    >
+    <xacro:insert_block name="prop_guard_inertia" />
+  </xacro:prop_guard_macro>
 
   <!-- Instantiate rotors -->
   <xacro:vertical_rotor
