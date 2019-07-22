@@ -34,26 +34,26 @@ class position_control:
         -------------------------------------------Subscriber----------------------------------------------------
         '''
         rospy.Subscriber('/modquad'+num+'/waypoint', Waypoint, callback=self.waypoint_cb)
-        rospy.Subscriber('/modquad/whycon' + num + '/poses', PoseArray, callback=self.image_detection_cb)
+        rospy.Subscriber('/modquad' + num + '/whycon' + num + '/poses', PoseArray, callback=self.image_detection_cb)
         rospy.Subscriber('/modquad'+num+'/switch_control', Bool, callback=self.switch_control_cb)
-        rospy.Subscriber('/mavros'+num+'/local_position/pose', PoseStamped, callback=self.pose_cb)
+        rospy.Subscriber('/modquad' + num + '/mavros'+num+'/local_position/pose', PoseStamped, callback=self.pose_cb)
 
-        self.setpoint_pub = rospy.Publisher('/mavros' + num + '/setpoint_position/local', PoseStamped, queue_size = 10)
+        self.setpoint_pub = rospy.Publisher('/modquad' + num + '/mavros' + num + '/setpoint_position/local', PoseStamped, queue_size = 10)
 
-        self.pose_vel_setpoint_pub = rospy.Publisher('/mavros' + num + '/setpoint_raw/local', PositionTarget, queue_size = 10)
+        self.pose_vel_setpoint_pub = rospy.Publisher('/modquad' + num + '/mavros' + num + '/setpoint_raw/local', PositionTarget, queue_size = 10)
 
 
 	'''
         ------------------------------------------Service Proxy--------------------------------------------------
         '''
          
-        rospy.wait_for_service('/modquad/modquad'+num+'/track')
+        rospy.wait_for_service('/modquad'+num+'/track')
         Track_Service = rospy.ServiceProxy('modquad'+num+'/track', track)
 
-        rospy.wait_for_service('/modquad/modquad'+num+'/dock')
+        rospy.wait_for_service('/modquad'+num+'/dock')
         Dock_Service = rospy.ServiceProxy('modquad'+num+'/dock', dock)
         	
-        rospy.wait_for_service('/modquad/modquad'+num+'/join_groups')
+        rospy.wait_for_service('/modquad'+num+'/join_groups')
         Join_Group_Service = rospy.ServiceProxy('modquad'+num+'/join_groups', set_group)
         	
 	docked = False

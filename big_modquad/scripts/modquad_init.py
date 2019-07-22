@@ -59,49 +59,50 @@ class modquad:
         '''
         ---------------------------------------Service initialization----------------------------------------------
         '''
-        send_waypoint_service_init = rospy.Service('modquad'+num+'/send_waypoint', sendwaypoint, self.handle_send_waypoint)
-        send_groups_service_init = rospy.Service('modquad'+num+'/join_groups', set_group, self.handle_groups)
-        send_struct_waypoint_service_init = rospy.Service('modquad'+num+'/send_struct_waypoint', sendwaypoint_struct, self.handle_send_struct_waypoint)
-        takoff_service_init = rospy.Service('modquad'+num+'/take_off', takeoff, self.handle_take_off)
-        dock_service_init = rospy.Service('modquad'+num+'/dock', dock, self.handle_dock)
-        track_service_init = rospy.Service('modquad'+num+'/track',track,self.handle_track)
+        send_waypoint_service_init = rospy.Service('/modquad' + num + '/send_waypoint', sendwaypoint, self.handle_send_waypoint)
+        send_groups_service_init = rospy.Service('/modquad' + num + '/join_groups', set_group, self.handle_groups)
+        send_struct_waypoint_service_init = rospy.Service('/modquad' + num + '/send_struct_waypoint', sendwaypoint_struct, self.handle_send_struct_waypoint)
+        takoff_service_init = rospy.Service('/modquad' + num + '/take_off', takeoff, self.handle_take_off)
+        dock_service_init = rospy.Service('/modquad' + num + '/dock', dock, self.handle_dock)
+        track_service_init = rospy.Service('/modquad' + num + '/track',track,self.handle_track)
 
         '''
         -------------------------------------Publisher initialization----------------------------------------------
         '''
 
-        self.waypoint_pub = rospy.Publisher('/modquad'+num+'/waypoint', Waypoint, queue_size=10)
-	self.docked_pub = rospy.Publisher('/modquad/modquad_docked', Bool, queue_size=10)
+        self.waypoint_pub = rospy.Publisher('/modquad' + num + '/waypoint', Waypoint, queue_size=10)
+	self.docked_pub = rospy.Publisher('/modquad' + num + '/modquad_docked', Bool, queue_size=10)
 	self.modquad_switch_control_pub = rospy.Publisher('/modquad' + num + '/switch_control', Bool, queue_size=10)
         '''
         -------------------------------------Subscriber initialization---------------------------------------------
         '''
         if Environment == "gps":
             rospy.logwarn("---- MODQUAD USING GPS ----")
-            rospy.Subscriber('/mavros' + num + '/local_position/pose', PoseStamped, callback=self.pose_cb)
-            rospy.Subscriber('/mavros' + num + '/local_position/velocity', TwistStamped, callback=self.vel_cb)
+            rospy.Subscriber('/modquad' + num + '/mavros' + num + '/local_position/pose', PoseStamped, callback=self.pose_cb)
+            rospy.Subscriber('/modquad' + num + '/mavros' + num + '/local_position/velocity', TwistStamped, callback=self.vel_cb)
 
         elif (Environment == "mocap"):
             rospy.logwarn("---- MODQUAD USING MOCAP ----")
-            rospy.Subscriber('/mavros' + num + '/vision_pose/pose', PoseStamped, callback=self.pose_cb)
+            rospy.Subscriber('/modquad' + num + '/mavros' + num + '/vision_pose/pose', PoseStamped, callback=self.pose_cb)
 
-        rospy.Subscriber('/modquad/whycon' + num + '/poses',PoseArray,callback = self.vision_goal_cb)
+        rospy.Subscriber('/modquad' + num + '/whycon' + num + '/poses',PoseArray,callback = self.vision_goal_cb)
         rospy.Subscriber('/modquad' + num + '/filtered_Vision_Odom',VisionOdom,callback = self.vision_odom_cb)
-        rospy.Subscriber('/mavros' + num + '/imu/data',Imu,callback = self.Imu_cb)
-	rospy.Subscriber('/modquad/modquad_docked', Bool, callback = self.dock_state_cb)
+        rospy.Subscriber('/modquad' + num + '/mavros' + num + '/imu/data',Imu,callback = self.Imu_cb)
+	rospy.Subscriber('/modquad' + num + '/modquad_docked', Bool, callback = self.dock_state_cb)
 
         '''
         ---------------------------Service Proxy initialization-----------------------------------
         '''
+        #self.robot_list = [ord(encoded) for encoded in self.robot_list if type(encoded) is str] #decode from string to int
         for uavID in self.robot_list:
 	    self.switch_control_hash_pub[uavID] = rospy.Publisher('/modquad' + str(uavID) + '/switch_control', Bool, queue_size=10)
-            rospy.wait_for_service('/modquad/modquad'+ str(uavID) +'/join_groups')
+            rospy.wait_for_service('/modquad'+ str(uavID) +'/join_groups')
             self.joined_group_hash[uavID] = rospy.ServiceProxy('modquad'+str(uavID)+'/join_groups', set_group)
-            rospy.wait_for_service('/modquad/modquad'+ str(uavID) +'/send_waypoint')
+            rospy.wait_for_service('/modquad'+ str(uavID) +'/send_waypoint')
             self.SendWaypoint_Service[uavID] = rospy.ServiceProxy('/modquad/modquad'+ str(uavID) +'/send_waypoint', sendwaypoint)
-            self.set_control_hash[uavID] = rospy.Publisher('/mavros'+ str(uavID) +'/modquad_control/control_flag', CooperativeControl, queue_size = 10)
+            self.set_control_hash[uavID] = rospy.Publisher('/modquad' + str(uavID) + '/mavros'+ str(uavID) +'/modquad_control/control_flag', CooperativeControl, queue_size = 10)
 
-        self.SendWaypoint_Struct_Service = rospy.ServiceProxy('/modquad/modquad'+num+'/send_struct_waypoint', sendwaypoint_struct)
+        self.SendWaypoint_Struct_Service = rospy.ServiceProxy('/modquad'+num+'/send_struct_waypoint', sendwaypoint_struct)
         rospy.loginfo("INITIALIZATION FINISHED!")
 
     def pos_control_param_init(self,):
@@ -136,7 +137,6 @@ class modquad:
         '''
         mass in simulation: self.m = 0.0625
         '''
-        self.m = rospy.get_param("module_mass")
         self.g = 9.81
         self.H_cam_quad1 = np.matrix([[0,0,1,0.106],[-1,0,0,0],[0,-1,0,0.07],[0,0,0,1]])
 

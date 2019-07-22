@@ -49,9 +49,6 @@ class kalmanfilter:
 
             self.Update_orientation_and_acceleration(Imu)
             Vision_Odom = self.mu_to_Vision_Odom(mu)
-            #pdb.set_trace()
-            #self.check_acceleration(self.Imu,mu)
-            #rospy.loginfo(mu)
             self.state_pub.publish(Vision_Odom)
             rate.sleep()
 
@@ -229,8 +226,8 @@ class kalmanfilter:
 
     def pub_and_sub_init(self,):
         self.state_pub = rospy.Publisher('/modquad' + self.ip_addr + '/filtered_Vision_Odom', VisionOdom, queue_size=10)
-        rospy.Subscriber('/modquad/whycon' + self.ip_addr + '/poses', PoseArray, callback=self.image_detection_cb)
-        rospy.Subscriber('/mavros' + self.ip_addr + '/imu/data', Imu, callback=self.Imu_cb)
+        rospy.Subscriber('/modquad' + self.ip_addr + '/whycon' + self.ip_addr + '/poses', PoseArray, callback=self.image_detection_cb)
+        rospy.Subscriber('/modquad' + self.ip_addr + '/mavros' + self.ip_addr + '/imu/data', Imu, callback=self.Imu_cb)
 
 
     def get_Rotation_matrix(self,Imu):
