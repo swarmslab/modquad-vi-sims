@@ -1,6 +1,0 @@
-bool track_flag
-string dock_side
-float64 waitmod_yaw 
-uint8 target_ip
----
-string state

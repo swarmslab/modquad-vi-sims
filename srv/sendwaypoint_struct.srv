@@ -1,7 +1,0 @@
-uint8[] Robot_list
-float64 x
-float64 y
-float64 z
-float64 yaw 
----
-bool point_sent
