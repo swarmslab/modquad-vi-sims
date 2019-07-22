@@ -47,7 +47,7 @@
     <include file="$(find modquad)/launch/px4.launch">
 	<arg name="mavros_name" value="$(arg mavros_name)" />
 	<arg name="fcu_url" value="udp://:14540@localhost:14580" />
-        <arg name="tgt_system" value="$(eval 0 + arg('ip_addr'))"/>
+        <arg name="tgt_system" value="$(eval 1 + arg('ip_addr'))"/>
         <arg name="tgt_component" value="1"/>
         <arg name="gcs_url" value=""/>
     </include>
@@ -92,7 +92,7 @@
     <include file="$(find modquad)/launch/px4.launch">
 	<arg name="mavros_name" value="$(arg mavros_name)" />
 	<arg name="fcu_url" value="udp://:14541@localhost:14581" />
-        <arg name="tgt_system" value="$(eval 0 + arg('ip_addr'))"/>
+        <arg name="tgt_system" value="$(eval 1 + arg('ip_addr'))"/>
         <arg name="tgt_component" value="1"/>
         <arg name="gcs_url" value=""/>
     </include>
