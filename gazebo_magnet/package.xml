@@ -1,0 +1,25 @@
+<?xml version="1.0"?>
+<package>
+  <name>gazebo_magnet</name>
+  <version>0.1.0</version>
+  <description>Gazebo magnet simulation</description>
+  <license>MIT</license>
+  <maintainer email="yehonathan.litman@stonybrook.edu">Yehonathan Litman</maintainer>
+  <author >Yehonathan Litman</author>
+
+  <buildtool_depend>catkin</buildtool_depend>
+
+  <build_depend>gazebo</build_depend>
+  <build_depend>gazebo_ros</build_depend>
+  <build_depend>gazebo_msgs</build_depend>
+  <build_depend>geometry_msgs</build_depend>
+  <build_depend>roscpp</build_depend>
+  <run_depend>message_runtime</run_depend> 
+  <run_depend>roscpp</run_depend>
+  <run_depend>geometry_msgs</run_depend>
+  <run_depend>gazebo</run_depend>
+  <run_depend>gazebo_msgs</run_depend>
+  <run_depend>gazebo_ros</run_depend>
+
+</package>
+

@@ -1,0 +1,21 @@
+plugin_blacklist:
+# common
+- actuator_control
+- ftp
+- safety_area
+- hil
+# extras
+- altitude
+- debug_value
+- home_position
+- px4flow
+- vibration
+- image_pub
+- vision_speed_estimate
+
+plugin_whitelist:
+- 'sys_*'
+- command
+- param
+- modquad_control
+- mocap_pose_estimate

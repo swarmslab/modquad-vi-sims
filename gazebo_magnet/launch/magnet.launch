@@ -1,0 +1,4 @@
+<launch>
+  <node pkg="gazebo_ros" name="magnet_test" type="gazebo" args="--verbose $(find gazebo_magnet)/worlds/dipole_magnet.world" output="screen">
+  </node>
+</launch>

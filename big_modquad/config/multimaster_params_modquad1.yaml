@@ -1,0 +1,13 @@
+sync_topics: ['/vicon/Modquad1/odom',
+  '/vicon/Modquad2/odom',
+  '/mavros1/mocap/pose',
+  '/mavros1/imu/data',
+  '/whycon/poses',
+  #'/whycon/image_out',
+  '/modquad1/filtered_Vision_Odom',
+  '/modquad2/switch_control',
+  '/modquad1/setpoint_attitude/thrust',
+  '/mavros2/modquad_control/control_flag']
+
+ignore_nodes: ['']
+ignore_services: ['']

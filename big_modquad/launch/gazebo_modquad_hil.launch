@@ -1,0 +1,44 @@
+<?xml version="1.0"?>
+<launch>
+
+  <arg name="Environment" default="mocap"/>
+  <arg name="name" value="modquad"/>
+  <arg name="ip_addr" default="$(eval env('IP_DIGITS'))"/>
+  <arg name="modquad_name" default="$(eval arg('name') + env('IP_DIGITS'))" />
+  <arg name="mavros_name" default="$(eval 'mavros' + env('IP_DIGITS'))" />
+  <arg name="targets" default="1"/>
+
+  <group ns="modquad">
+    <param name="ip_addr" value="$(arg ip_addr)"/>
+    <param name="Environment" type="string" value="$(arg Environment)"/>
+    <param name="RobotsNumber"  value="1"/>
+    <param name="module_mass" value="0.04200"/>
+    <rosparam param="robot_list">[53]</rosparam>
+
+    <node pkg="modquad" name="$(arg modquad_name)" type="pos_control.py" output="screen">
+    </node>
+
+    <node pkg="modquad" name="$(eval 'modquadfilter' + env('IP_DIGITS'))" type="filter.py" output="screen">
+    </node>
+    <include file="$(find modquad)/launch/rpi_camera.launch">
+      <arg name="name" value="$(eval 'raspicam' + env('IP_DIGITS'))" />
+    </include>
+
+    <node name="$(eval 'whycon' + env('IP_DIGITS'))" type="whycon" pkg="whycon" output="screen">
+      <remap from="/camera/image_rect_color" to="$(eval '/modquad/raspicam' + env('IP_DIGITS') + '/image')"/>
+      <remap from="/camera/camera_info" to="$(eval '/modquad/raspicam' + env('IP_DIGITS') + '/camera_info')"/>
+      <param name="targets" value="$(arg targets)"/>
+      <param name="name" value="$(eval 'whycon' + env('IP_DIGITS'))"/>
+    </node>
+  </group>
+
+<include file="$(find modquad)/launch/px4.launch">
+	<arg name="mavros_name" value="$(arg mavros_name)" />
+	<arg name="fcu_url" value="udp://:14540@127.0.0.1:14557" />
+</include>
+
+<!--include file="$(find modquad)/launch/master_sync.launch">
+	<arg name="config_name" value="multimaster_params_modquad1.yaml" />
+</include-->
+
+</launch>
