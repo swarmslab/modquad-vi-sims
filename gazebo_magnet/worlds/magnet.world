@@ -11,34 +11,8 @@
       <uri>model://sun</uri>
     </include>
 
-    <model name="plane">
-      <pose>0 0 0.9 0 0 0</pose>
-      <static>true</static>
-      <link name="link">
-        <collision name="collision">
-          <geometry>
-            <box>
-              <size>1 1 0.02</size>
-            </box>
-          </geometry>
-        </collision>
-
-        <visual name="visual">
-          <geometry>
-            <box>
-              <size>1 1 0.02</size>
-            </box>
-          </geometry>
-
-          <material>
-            <ambient>1 0 0 1</ambient>
-          </material>
-        </visual>
-      </link>
-    </model>
-
     <model name="actuator_magnet">
-      <pose>0 0 1 0 0 0</pose>
+      <pose>0 0 0.25 0 0 0</pose>
       <static>true</static>
       <link name="magnet">
         <inertial>
@@ -70,7 +44,7 @@
     </model>        
 
     <model name="capsule_magnet">
-      <pose>0.08 0 0.925 0 0 0</pose>
+      <pose>0.08 0 0 0 0 0</pose>
       <link name="magnet">
         <inertial>
           <mass>0.01</mass>

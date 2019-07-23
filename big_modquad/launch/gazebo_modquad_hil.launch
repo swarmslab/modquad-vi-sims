@@ -9,7 +9,7 @@
   <arg name="world" default="$(find modquad)/config/worlds/empty.world"/>
   <arg name="gui" default="true"/>
   <arg name="debug" default="false"/>
-  <arg name="verbose" default="true"/>
+  <arg name="verbose" default="false"/>
   <arg name="paused" default="false"/>
 
   <include file="$(find gazebo_ros)/launch/empty_world.launch">

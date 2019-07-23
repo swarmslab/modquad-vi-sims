@@ -76,6 +76,15 @@
     >
   </xacro:barometer_plugin_macro>
 
+  <xacro:magnet_plugin_macro
+    namespace="${namespace}"
+    suffix="1"
+    strength="0 0 1.5"
+    should_publish="true"
+    >
+    <origin xyz="-0.965 0 0.05" rpy="0 0 0" />
+  </xacro:magnet_plugin_macro>
+
   <xacro:tag_mount_macro
     namespace="${namespace}"
     suffix="back"
