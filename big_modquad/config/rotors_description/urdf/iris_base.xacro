@@ -76,6 +76,30 @@
     >
   </xacro:barometer_plugin_macro>
 
+  <xacro:tag_mount_macro
+    namespace="${namespace}"
+    suffix="back"
+    >
+    <box size="0.14 0.14 0.001" />
+    <origin xyz="-0.265 0 0.05" rpy="0 0 0" />
+  </xacro:tag_mount_macro>
+
+  <xacro:tag_mount_macro
+    namespace="${namespace}"
+    suffix="right"
+    >
+    <box size="0.14 0.14 0.001" />
+    <origin xyz="0 -0.265 0.05" rpy="0 0 1.57079632679" />
+  </xacro:tag_mount_macro>
+
+  <xacro:tag_mount_macro
+    namespace="${namespace}"
+    suffix="left"
+    >
+    <box size="0.14 0.14 0.001" />
+    <origin xyz="0 0.27 0.05" rpy="0 0 1.57079632679" />
+  </xacro:tag_mount_macro>
+
   <xacro:camera_macro
     namespace="${namespace}"
     parent_link="base_link"

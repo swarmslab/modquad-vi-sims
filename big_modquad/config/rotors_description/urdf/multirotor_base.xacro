@@ -114,7 +114,8 @@
     </link>
 
     <gazebo reference="prop_guard_${robot_namespace}">
-      <material>Gazebo/DarkGrey</material>
+      <material>whycon</material>
+      <!--material>Gazebo/DarkGrey</material-->
       <collision name='prop_guard_${robot_namespace}_inertia_collision'>
         <surface>
           <contact>

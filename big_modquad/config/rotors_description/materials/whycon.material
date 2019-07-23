@@ -1,0 +1,15 @@
+material whycon
+{
+  technique
+  {
+    pass
+    {
+      texture_unit
+      {
+        texture ../textures/whycon_texture.png
+        // Repeat the texture over the surface (4 per face)
+        scale 1 1
+      }
+    }
+  }
+}
