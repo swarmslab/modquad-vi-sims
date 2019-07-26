@@ -163,7 +163,7 @@
       </visual>
       <collision>
         <geometry>
-          <cylinder length="0.005" radius="${radius_rotor}" /> <!-- [m] -->
+          <cylinder length="0.005" radius="${radius_rotor/3}" /> <!-- [m] -->
         </geometry>
       </collision>
     </link>

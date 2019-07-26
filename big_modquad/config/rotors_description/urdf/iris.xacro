@@ -6,7 +6,7 @@
   <xacro:property name="rotor_velocity_slowdown_sim" value="10" />
   <xacro:property name="mesh_file" value="iris.stl" />
   <xacro:property name="mesh_scale" value="1 1 1"/>
-  <xacro:property name="mesh_scale_prop" value="1 1 1"/>
+  <xacro:property name="mesh_scale_prop" value="0.5 0.5 1"/>
   <xacro:property name="mesh_scale_guard" value="0.0025 0.0025 0.0025"/>
   <xacro:property name="mass" value="1.5" /> <!-- [kg] -->
   <xacro:property name="body_width" value="0.47" /> <!-- [m] -->

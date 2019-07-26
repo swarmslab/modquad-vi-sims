@@ -115,6 +115,7 @@
     <link name="${namespace}/magnet_${suffix}_link">
       <collision>
         <origin xyz="0 0 0" rpy="0 0 0" />
+        <!--xacro:insert_block name="origin" /-->
         <geometry>
           <!--box size="0.15 0.017 0.017" /-->
           <cylinder length="0.0015" radius="0.0085" />
@@ -153,10 +154,38 @@
     </gazebo>
   </xacro:macro>
 
+  <xacro:macro name="magnet_guard_macro"
+    params="namespace suffix *origin">
+    <link name="${namespace}/magnet_guard_${suffix}_link">
+      <collision>
+        <origin xyz="0 0 0" rpy="0 0 0" />
+        <!--xacro:insert_block name="origin" /-->
+        <geometry>
+          <box size="0.01 0.04 0.15" />
+        </geometry>
+      </collision>
+      <visual>
+        <origin xyz="0 0 0" rpy="0 0 0" />
+        <geometry>
+          <box size="0.01 0.04 0.15" />
+        </geometry>
+      </visual>
+    </link>
+    <joint name="${namespace}/magnet_guard_${suffix}_joint" type="fixed">
+      <xacro:insert_block name="origin" />
+      <parent link="base_link" />
+      <child link="${namespace}/magnet_guard_${suffix}_link" />
+    </joint>
+    <gazebo reference="${namespace}/magnet_guard_${suffix}_link">
+      <material>Gazebo/TurquoiseGlow</material>
+    </gazebo>
+  </xacro:macro>
+
   <xacro:macro name="tag_mount_macro" params="namespace suffix *cylinder *origin">
     <link name="${namespace}/${suffix}_tag_mount_link">
       <collision>
         <origin xyz="0 0 0" rpy="0 0 0" />
+        <!--xacro:insert_block name="origin" /-->
         <geometry>
           <xacro:insert_block name="cylinder" />
         </geometry>

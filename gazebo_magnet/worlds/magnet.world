@@ -12,19 +12,11 @@
     </include>
 
     <model name="actuator_magnet">
-      <pose>0.08 0 0 0 0 0</pose>
-      <!--static>true</static-->
+      <pose>0 0 0.15 0 0 0</pose>
+      <static>true</static>
       <link name="magnet">
         <inertial>
-          <mass>0.4</mass>
-          <inertia>
-            <ixx>1.8e-3</ixx>
-            <ixy>0</ixy>
-            <ixz>0</ixz>
-            <iyy>1.8e-3</iyy>
-            <iyz>0</iyz>
-            <izz>1.543e-3</izz>
-          </inertia>
+          <mass>4.0</mass>
         </inertial>
         <collision name="collision">
           <geometry>
@@ -32,10 +24,6 @@
               <radius>0.05</radius>
               <length>0.1</length>
             </cylinder>
-            <!--box>
-              <size>1 1 1</size>
-            </box-->
-            <!--box size="0.15 0.017 0.017" /-->
           </geometry>
         </collision>
 
@@ -50,7 +38,7 @@
       </link>
       <plugin name="dipole_magnet" filename="libgazebo_dipole_magnet.so">
           <bodyName>magnet</bodyName>
-          <dipole_moment>0 0 50</dipole_moment>
+          <dipole_moment>0 0 10</dipole_moment>
           <xyzOffset>0 0 0</xyzOffset>
       </plugin>
     </model>        
@@ -59,21 +47,21 @@
       <pose>0 0 0 0 0 0</pose>
       <link name="magnet">
         <inertial>
-          <mass>0.4</mass>
+          <mass>0.01</mass>
           <inertia>
-            <ixx>1.8e-3</ixx>
+            <ixx>1.8e-7</ixx>
             <ixy>0</ixy>
             <ixz>0</ixz>
-            <iyy>1.8e-3</iyy>
+            <iyy>1.8e-7</iyy>
             <iyz>0</iyz>
-            <izz>1.543e-3</izz>
+            <izz>1.543e-7</izz>
           </inertia>
         </inertial>
         <collision name="collision">
           <geometry>
             <cylinder>
-              <radius>0.05</radius>
-              <length>0.1</length>
+              <radius>0.005</radius>
+              <length>0.01</length>
             </cylinder>
           </geometry>
         </collision>
@@ -81,8 +69,8 @@
         <visual name="visual">
           <geometry>
             <cylinder>
-              <radius>0.05</radius>
-              <length>0.1</length>
+              <radius>0.005</radius>
+              <length>0.01</length>
             </cylinder>
           </geometry>
         </visual>
@@ -90,7 +78,7 @@
 
       <plugin name="dipole_magnet" filename="libgazebo_dipole_magnet.so">
         <bodyName>magnet</bodyName>
-        <dipole_moment>0 0 50</dipole_moment>
+        <dipole_moment>0 0 1.26</dipole_moment>
         <!-- Set to false if not using ROS -->
         <shouldPublish>true</shouldPublish>
         <topicNs>capsule</topicNs>

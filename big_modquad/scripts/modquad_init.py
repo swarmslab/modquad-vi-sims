@@ -99,7 +99,7 @@ class modquad:
             rospy.wait_for_service('/modquad'+ str(uavID) +'/join_groups')
             self.joined_group_hash[uavID] = rospy.ServiceProxy('modquad'+str(uavID)+'/join_groups', set_group)
             rospy.wait_for_service('/modquad'+ str(uavID) +'/send_waypoint')
-            self.SendWaypoint_Service[uavID] = rospy.ServiceProxy('/modquad/modquad'+ str(uavID) +'/send_waypoint', sendwaypoint)
+            self.SendWaypoint_Service[uavID] = rospy.ServiceProxy('/modquad'+ str(uavID) +'/send_waypoint', sendwaypoint)
             self.set_control_hash[uavID] = rospy.Publisher('/modquad' + str(uavID) + '/mavros'+ str(uavID) +'/modquad_control/control_flag', CooperativeControl, queue_size = 10)
 
         self.SendWaypoint_Struct_Service = rospy.ServiceProxy('/modquad'+num+'/send_struct_waypoint', sendwaypoint_struct)
