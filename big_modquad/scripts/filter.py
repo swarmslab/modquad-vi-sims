@@ -112,8 +112,8 @@ class kalmanfilter:
         try:
           self.Current_image_Rotmatrix = self.get_Rotation_matrix(self.Imu)
         except AttributeError:
-          self.Current_image_Rotmatrix = self.get_Rotation_matrix(self.Imu)
           rospy.logwarn("Waiting for IMU input...")
+          return
         self.image_updated = True
 
     def Imu_cb(self,msg):

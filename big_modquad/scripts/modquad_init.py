@@ -71,6 +71,8 @@ class modquad:
         '''
 
         self.waypoint_pub = rospy.Publisher('/modquad' + num + '/waypoint', Waypoint, queue_size=10)
+        self.mavros_attitude_pub = rospy.Publisher('/modquad' + num + '/mavros'+num+'/setpoint_raw/attitude', AttitudeTarget, queue_size=10)
+        self.mavros_thrust_pub = rospy.Publisher('/modquad' + num + '/mavros'+num+'/setpoint_attitude/thrust', Thrust, queue_size=10)
 	self.docked_pub = rospy.Publisher('/modquad' + num + '/modquad_docked', Bool, queue_size=10)
 	self.modquad_switch_control_pub = rospy.Publisher('/modquad' + num + '/switch_control', Bool, queue_size=10)
         '''
@@ -109,34 +111,33 @@ class modquad:
         self.Kp = Vector3()
         self.Kd = Vector3()
 	self.ki = Vector3()
-        self.Kp.x = 3.00
-        self.Kp.y = 3.00
+        self.Kp.x = 3.5
+        self.Kp.y = 3.5
         self.Kp.z = 3.2
-        self.Kd.x = 1.95 #1.75
-        self.Kd.y = 1.75 #1.45
+        self.Kd.x = 1.0
+        self.Kd.y = 1.0
         self.Kd.z = 1.0
         self.ki.x = 0.01
         self.ki.y = 0.01
-        self.ki.z = 0.050
+        self.ki.z = 0.02
+	#These are parameters for Gazebo models only
 
     def track_control_param_init(self, ):
         self.Kp_track = Vector3()
         self.Kd_track = Vector3()
         self.Ki_track = Vector3()
-        self.Kp_track.x = 3.00 #2.50
-        self.Kp_track.y = 3.00 #2.50
-        self.Kp_track.z = 3.2  #2.80
-        self.Kd_track.x = 1.95 #1.45 
-        self.Kd_track.y = 1.75 #1.45
-        self.Kd_track.z = 2.5  #1.8
+        self.Kp_track.x = 3.5
+        self.Kp_track.y = 3.5
+        self.Kp_track.z = 2.2
+        self.Kd_track.x = 1.0 
+        self.Kd_track.y = 1.0
+        self.Kd_track.z = 2.5
         self.Ki_track.x = 0.01
         self.Ki_track.y = 0.01
-        self.Ki_track.z = 0.050
+        self.Ki_track.z = 0.01
 
     def quadrotor_physical_parameter(self,num):
-        '''
-        mass in simulation: self.m = 0.0625
-        '''
+	self.m = 0.06
         self.g = 9.81
         self.H_cam_quad1 = np.matrix([[0,0,1,0.106],[-1,0,0,0],[0,-1,0,0.07],[0,0,0,1]])
 
@@ -325,9 +326,13 @@ class modquad:
         return start_point
 
     def get_start_position_tag_frame(self,):
-        start_point = Pose()
-        start_point.position = self.curr_vision_odom.position
-        start_point.orientation = self.curr_vision_odom.orientation
+        start_point = Waypoint()
+        start_point.x = self.curr_vision_odom.position.x
+        start_point.y = self.curr_vision_odom.position.y
+        start_point.z = self.curr_vision_odom.position.z
+        orien = self.curr_vision_odom.orientation
+        start_point.yaw = qua2eu([orien.x,orien.y,orien.z,orien.w],'sxyz')[2] 
+        start_point.updated = False
         return start_point
 
     def get_Imu(self,):
@@ -358,6 +363,227 @@ class modquad:
     def set_joined_groups(self, new_group):
         self.joined_groups.extend(new_group)
 
+    '''
+    ------------------------------------------- Trajectory functions -------------------------------------------
+    '''
+
+    def two_pts_trajectory_init(self,startpoint, endpoint,t0,tf):
+        self.t0 = t0
+        self.tf = tf
+        self.x_initial = np.matrix([[startpoint.x, endpoint.x, 0, 0, 0, 0]]).transpose()
+        self.y_initial = np.matrix([[startpoint.y, endpoint.y, 0, 0, 0, 0]]).transpose()
+        self.z_initial = np.matrix([[startpoint.z, endpoint.z, 0, 0, 0, 0]]).transpose()
+        self.yaw_initial = np.matrix([[startpoint.yaw, endpoint.yaw, 0, 0, 0, 0]]).transpose()
+        self.A = np.matrix([[1, self.t0, self.t0 ** 2, self.t0 ** 3    , self.t0 ** 4     , self.t0 ** 5],
+                            [1, self.tf, self.tf ** 2, self.tf ** 3    , self.tf ** 4     , self.tf ** 5],
+                            [0, 1      , 2 * self.t0 , 3 * self.t0 ** 2, 4 * self.t0 ** 3 , 5 * self.t0 ** 4],
+                            [0, 1      , 2 * self.tf , 3 * self.tf ** 2, 4 * self.tf ** 3 , 5 * self.tf ** 4],
+                            [0, 0      , 2           , 6 * self.t0     , 12 * self.t0 ** 2, 20 * self.t0 ** 3],
+                            [0, 0      , 2           , 6 * self.tf     , 12 * self.tf ** 2, 20 * self.tf ** 3]])
+        self.A_init_flag = True
+        self.xcoeff = np.linalg.inv(self.A) * self.x_initial
+        self.ycoeff = np.linalg.inv(self.A) * self.y_initial
+        self.zcoeff = np.linalg.inv(self.A) * self.z_initial
+        self.yawcoeff = np.linalg.inv(self.A) * self.yaw_initial
+
+    def two_pts_trajectory_generator(self,t,waypoint):
+        des_trajectory_point = Trajectory()
+        if self.A_init_flag:
+            if self.t0 < t < self.tf:
+                polynominal = np.matrix([[1, t, t ** 2, t ** 3    , t ** 4     , t ** 5],
+                                     [0, 1, 2 * t , 3 * t ** 2, 4 * t ** 3 , 5 * t ** 4],
+                                     [0, 0, 2     , 6 * t     , 12 * t ** 2, 20 * t ** 3]])
+                x_d = polynominal * self.xcoeff
+                y_d = polynominal * self.ycoeff
+                z_d = polynominal * self.zcoeff
+                yaw_d = polynominal * self.yawcoeff
+                des_trajectory_point.position.x = x_d[0,0]
+                des_trajectory_point.position.y = y_d[0,0]
+                des_trajectory_point.position.z = z_d[0,0]
+                des_trajectory_point.velocity.x = x_d[1,0]
+                des_trajectory_point.velocity.y = y_d[1,0]
+                des_trajectory_point.velocity.z = z_d[1,0]
+                des_trajectory_point.acceleration.x = x_d[2,0]
+                des_trajectory_point.acceleration.y = y_d[2,0]
+                des_trajectory_point.acceleration.z = z_d[2,0]
+                des_trajectory_point.yaw = yaw_d[0,0]
+
+            else:
+                des_trajectory_point.position.x = waypoint.x
+                des_trajectory_point.position.y = waypoint.y
+                des_trajectory_point.position.z = waypoint.z
+                des_trajectory_point.velocity.x = 0.0
+                des_trajectory_point.velocity.y = 0.0
+                des_trajectory_point.velocity.z = 0.0
+                des_trajectory_point.acceleration.x = 0.0
+                des_trajectory_point.acceleration.y = 0.0
+                des_trajectory_point.acceleration.z = 0.0
+                des_trajectory_point.yaw = waypoint.yaw
+
+            des_trajectory_point.updated = True
+            return des_trajectory_point
+
+    '''
+    --------------------------------Control mehtods----------------------------------------------
+    '''
+
+    def pos_control(self,des_trajectory_point,curr_pose, curr_vel, yaw_des, time_now):
+        Rot_des = np.matrix(np.zeros((4, 4)))
+        Rot_des[3, 3] = 1
+        attitude_des = AttitudeTarget()
+        thrust = Thrust()
+        des_acc = Vector3()
+
+        if self.A_init_flag:
+            thrust.header = curr_pose.header
+            attitude_des.header = curr_pose.header
+
+            dt = time_now - self.time_prev
+	    
+            ex = des_trajectory_point.position.x - curr_pose.pose.position.x
+            ey = des_trajectory_point.position.y - curr_pose.pose.position.y
+            ez = des_trajectory_point.position.z - curr_pose.pose.position.z
+            evx = des_trajectory_point.velocity.x - curr_vel.twist.linear.x
+            evy = des_trajectory_point.velocity.y - curr_vel.twist.linear.y
+            evz = des_trajectory_point.velocity.z - curr_vel.twist.linear.z
+            self.intx = self.intx + ex * dt
+            self.inty = self.inty + ey * dt
+            self.intz = self.intz + ez * dt
+            des_acc.x = des_trajectory_point.acceleration.x + self.Kp.x * ex + self.Kd.x * evx + self.ki.x * self.intx
+            des_acc.y = des_trajectory_point.acceleration.y + self.Kp.y * ey + self.Kd.y * evy + self.ki.y * self.inty
+            des_acc.z = des_trajectory_point.acceleration.z + self.Kp.z * ez + self.Kd.z * evz + self.ki.z * self.intz
+            curr_quaternion = [curr_pose.pose.orientation.x, curr_pose.pose.orientation.y,
+                             curr_pose.pose.orientation.z, curr_pose.pose.orientation.w]
+            H_curr = tf.transformations.quaternion_matrix(curr_quaternion)
+            Rot_curr = np.matrix(H_curr[:3, :3])
+            Force_des = np.matrix([[0], [0], [self.m * self.g]])+self.m * np.matrix([[des_acc.x], [des_acc.y], [des_acc.z]])
+            Force_des_body = Rot_curr * Force_des
+            thrust.thrust = Force_des_body[2]
+
+            Rot_des[:3, 2] = np.matrix(Force_des / LA.norm(Force_des))
+            x_body_in_world = np.matrix([[np.cos(des_trajectory_point.yaw)], [np.sin(des_trajectory_point.yaw)], [0]])
+            y_body_in_world = np.cross(Rot_des[:3, 2], x_body_in_world, axis=0)
+            Rot_des[:3, 1] = np.matrix(y_body_in_world / LA.norm(y_body_in_world))
+            Rot_des[:3, 0] = np.matrix(np.cross(Rot_des[:3, 1], Rot_des[:3, 2], axis=0))
+
+            quad_des = tf.transformations.quaternion_from_matrix(Rot_des)
+            attitude_des.orientation.x = quad_des[0]
+            attitude_des.orientation.y = quad_des[1]
+            attitude_des.orientation.z = quad_des[2]
+            attitude_des.orientation.w = quad_des[3]
+            attitude_des.thrust = thrust.thrust
+
+            self.mavros_attitude_pub.publish(attitude_des)
+            self.mavros_thrust_pub.publish(thrust)
+
+        self.time_prev = time_now
+
+    def track_and_trajectory_dock_control(self,des_trajectory_point, curr_odom, yaw_des, time_now, docker):
+        if docker == self.num:
+	    pass
+        else:
+            return
+
+        Rot_des = np.matrix(np.zeros((4, 4)))
+        Rot_des[3, 3] = 1
+        attitude_des = AttitudeTarget()
+        thrust = Thrust()
+        des_acc = Vector3()
+
+        if self.A_init_flag:
+            thrust.header = curr_odom.header
+            attitude_des.header = curr_odom.header
+            
+            dt = time_now - self.time_prev
+            ex = des_trajectory_point.position.x - curr_odom.position.x
+            ey = des_trajectory_point.position.y - curr_odom.position.y
+            ez = des_trajectory_point.position.z - curr_odom.position.z
+            evx = des_trajectory_point.velocity.x - curr_odom.velocity.x
+            evy = des_trajectory_point.velocity.y - curr_odom.velocity.y
+            evz = des_trajectory_point.velocity.z - curr_odom.velocity.z
+
+	    self.intx = self.intx + ex * dt
+	    self.inty = self.inty + ey * dt
+	    self.intz = self.intz + ez * dt
+            
+            des_acc.x = des_trajectory_point.acceleration.x + self.Kp_track.x * ex + self.Kd_track.x * evx + self.Ki_track.x * self.intx
+            des_acc.y = des_trajectory_point.acceleration.y + self.Kp_track.y * ey + self.Kd_track.y * evy + self.Ki_track.y * self.inty
+            des_acc.z = des_trajectory_point.acceleration.z + self.Kp_track.z * ez + self.Kd_track.z * evz + self.Ki_track.z * self.intz
+            Rot_waitmod_w = np.matrix([[np.cos(self.waitmod_yaw),-np.sin(self.waitmod_yaw),0],[np.sin(self.waitmod_yaw),np.cos(self.waitmod_yaw),0],[0,0,1]]).transpose()
+            curr_quaternion = [curr_odom.orientation.x, curr_odom.orientation.y,
+                               curr_odom.orientation.z, curr_odom.orientation.w]
+            H_curr = tf.transformations.quaternion_matrix(curr_quaternion)
+            Rot_curr = np.matrix(H_curr[:3, :3])
+            des_acc_relative = Rot_waitmod_w*np.matrix([[des_acc.x], [des_acc.y], [des_acc.z]])
+            Force_des = np.matrix([[0], [0], [self.m * self.g]])+self.m * des_acc_relative
+            Force_des_body = Rot_curr * Force_des
+            thrust.thrust = Force_des_body[2]
+              
+            Rot_des[:3, 2] = np.matrix(Force_des / LA.norm(Force_des))
+            x_body_in_world = np.matrix([[np.cos(des_trajectory_point.yaw)], [np.sin(des_trajectory_point.yaw)], [0]])
+            y_body_in_world = np.cross(Rot_des[:3, 2], x_body_in_world, axis=0)
+            Rot_des[:3, 1] = np.matrix(y_body_in_world / LA.norm(y_body_in_world))
+            Rot_des[:3, 0] = np.matrix(np.cross(Rot_des[:3, 1], Rot_des[:3, 2], axis=0))
+
+            quad_des = tf.transformations.quaternion_from_matrix(Rot_des)
+            attitude_des.orientation.x = quad_des[0]
+            attitude_des.orientation.y = quad_des[1]
+            attitude_des.orientation.z = quad_des[2]
+            attitude_des.orientation.w = quad_des[3]
+            attitude_des.thrust = thrust.thrust
+
+            self.mavros_attitude_pub.publish(attitude_des)
+            self.mavros_thrust_pub.publish(thrust)
+
+        self.time_prev = time_now
+
+    def modquad_control(self,des_trajectory_point,curr_pose, curr_vel, yaw_des):
+        Rot_des = np.matrix(np.zeros((4, 4)))
+        Rot_des[3, 3] = 1
+        attitude_des = AttitudeTarget()
+        thrust = Thrust()
+        des_acc = Vector3()
+
+        if self.A_init_flag:
+            thrust.header = curr_pose.header
+            attitude_des.header = curr_pose.header
+
+            ex = des_trajectory_point.position.x - curr_pose.pose.position.x
+            ey = des_trajectory_point.position.y - curr_pose.pose.position.y
+            ez = des_trajectory_point.position.z - curr_pose.pose.position.z
+            evx = des_trajectory_point.velocity.x - curr_vel.twist.linear.x
+            evy = des_trajectory_point.velocity.y - curr_vel.twist.linear.y
+            evz = des_trajectory_point.velocity.z - curr_vel.twist.linear.z
+            
+            des_acc.x = des_trajectory_point.acceleration.x + self.Kp.x * ex + self.Kd.x * evx
+            des_acc.y = des_trajectory_point.acceleration.y + self.Kp.y * ey + self.Kd.y * evy
+            des_acc.z = des_trajectory_point.acceleration.z + self.Kp.z * ez + self.Kd.z * evz
+
+            curr_quaternion = [curr_pose.pose.orientation.x, curr_pose.pose.orientation.y,
+                             curr_pose.pose.orientation.z, curr_pose.pose.orientation.w]
+            H_curr = tf.transformations.quaternion_matrix(curr_quaternion)
+            Rot_curr = np.matrix(H_curr[:3, :3])
+            
+            Force_des = np.matrix([[0], [0], [self.m * self.g]])+self.m * np.matrix([[des_acc.x], [des_acc.y], [des_acc.z]])
+            Force_des_body = Rot_curr * Force_des
+            thrust.thrust = Force_des_body[2]
+
+            Rot_des[:3, 2] = np.matrix(Force_des / LA.norm(Force_des))
+            x_body_in_world = np.matrix([[np.cos(des_trajectory_point.yaw)], [np.sin(des_trajectory_point.yaw)], [0]])
+            y_body_in_world = np.cross(Rot_des[:3, 2], x_body_in_world, axis=0)
+            Rot_des[:3, 1] = np.matrix(y_body_in_world / LA.norm(y_body_in_world))
+            Rot_des[:3, 0] = np.matrix(np.cross(Rot_des[:3, 1], Rot_des[:3, 2], axis=0))
+
+            quad_des = tf.transformations.quaternion_from_matrix(Rot_des)
+            attitude_des.orientation.x = quad_des[0]
+            attitude_des.orientation.y = quad_des[1]
+            attitude_des.orientation.z = quad_des[2]
+            attitude_des.orientation.w = quad_des[3]
+            attitude_des.thrust = thrust.thrust
+
+            self.mavros_attitude_pub.publish(attitude_des)
+            self.mavros_thrust_pub.publish(thrust)
+
     def dock_detector(self,curr_odom,curr_Imu):
         '''	
 	pos_x  = curr_odom.position.x
@@ -365,9 +591,6 @@ class modquad:
 	pos_z  = curr_odom.position.z
         '''	
 
-	#pos_x  = curr_odom[0]
-	#pos_y  = curr_odom[1]
-	#pos_z  = curr_odom[2]
         try:  
                jump = np.sqrt(curr_Imu.linear_acceleration.x**2 
                        + curr_Imu.linear_acceleration.y**2

@@ -18,4 +18,4 @@ plugin_whitelist:
 - command
 - param
 - modquad_control
-- mocap_pose_estimate
+#- mocap_pose_estimate

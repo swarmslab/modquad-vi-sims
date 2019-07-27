@@ -55,6 +55,7 @@ find_package(catkin REQUIRED COMPONENTS
    Waypoint.msg
    Struct_Waypoint.msg
    VisionOdom.msg
+   Trajectory.msg
  )
 
 ## Generate services in the 'srv' folder
