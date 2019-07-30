@@ -5,6 +5,7 @@ find_package(catkin REQUIRED COMPONENTS
   roscpp 
   geometry_msgs 
   gazebo_ros
+  message_generation
   )
 
 find_package(gazebo REQUIRED)
@@ -32,6 +33,10 @@ target_link_libraries(gazebo_dipole_magnet ${GAZEBO_LIBRARIES} ${catkin_LIBRARIE
 add_library(gazebo_links src/gazebo_ros_link_attacher.cpp)
 target_link_libraries(gazebo_links ${catkin_LIBRARIES} ${GAZEBO_LIBRARIES})
 add_dependencies(gazebo_links ${gazebo_magnet_EXPORTED_TARGETS})
+
+install(TARGETS gazebo_links
+   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+)
 
 catkin_package(
   DEPENDS

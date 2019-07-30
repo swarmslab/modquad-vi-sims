@@ -48,6 +48,8 @@ class modquad:
         self.num = int(num)
 	self.total_robots_num = total_robots_num
         self.robot_list = rospy.get_param("robot_list") 
+        self.x_orig = rospy.get_param("x_orig") 
+        self.y_orig = rospy.get_param("y_orig") 
         self.SendWaypoint_Service = {}
         self.switch_control_hash_pub = {}
         self.joined_group_hash = {}
@@ -73,6 +75,10 @@ class modquad:
         self.mavros_thrust_pub = rospy.Publisher('/modquad' + num + '/mavros'+num+'/setpoint_attitude/thrust', Thrust, queue_size=10)
 	self.docked_pub = rospy.Publisher('/modquad' + num + '/modquad_docked', Bool, queue_size=10)
 	self.modquad_switch_control_pub = rospy.Publisher('/modquad' + num + '/switch_control', Bool, queue_size=10)
+	self.modquad_pose_pub = rospy.Publisher('/modquad' + num + '/corrected_local_pose', PoseStamped, queue_size=10) 
+        #i have no idea why, but px4 says every vehicle's local position is
+        #at the origin, so we have to make a passthrough publisher. For future
+        #devs, this can probably be removed
         '''
         -------------------------------------Subscriber initialization---------------------------------------------
         '''
@@ -251,7 +257,11 @@ class modquad:
     '''
 
     def __pose_cb(self, msg, robot_id):
+        msg.pose.position.x += self.x_orig
+        msg.pose.position.y += self.y_orig
         self.pose_hash[robot_id] = msg
+        if robot_id == self.num:
+            self.modquad_pose_pub.publish(msg) 
 
     def __vel_cb(self, msg, robot_id):
         self.vel_hash[robot_id] = msg

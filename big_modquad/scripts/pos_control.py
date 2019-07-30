@@ -36,7 +36,7 @@ class position_control:
         rospy.Subscriber('/modquad'+num+'/waypoint', Waypoint, callback=self.waypoint_cb)
         rospy.Subscriber('/modquad' + num + '/whycon' + num + '/poses', PoseArray, callback=self.image_detection_cb)
         rospy.Subscriber('/modquad'+num+'/switch_control', Bool, callback=self.switch_control_cb)
-        rospy.Subscriber('/modquad' + num + '/mavros'+num+'/local_position/pose', PoseStamped, callback=self.pose_cb)
+        rospy.Subscriber('/modquad' + num +'/corrected_local_pose', PoseStamped, callback=self.pose_cb)
 
         self.setpoint_pub = rospy.Publisher('/modquad' + num + '/mavros' + num + '/setpoint_position/local', PoseStamped, queue_size = 10)
 
@@ -60,7 +60,6 @@ class position_control:
         yaw_des = 0.0
         track_dock_init = False
 
-	docked = False
         dock_flag = False
 	docked_state = False
         tag_detected = False

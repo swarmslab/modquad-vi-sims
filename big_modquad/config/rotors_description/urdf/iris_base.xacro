@@ -244,7 +244,7 @@
   <xacro:magnet_plugin_macro
     namespace="${namespace}"
     suffix="7_right_back_forward"
-    strength="0 0 0.7"
+    strength="0 0 1.2"
     should_publish="true"
     >
     <origin xyz="-0.134 -0.269 -0.006" rpy="3.14159265359 0 1.57079632679" />
@@ -253,7 +253,7 @@
   <xacro:magnet_plugin_macro
     namespace="${namespace}"
     suffix="8_right_back_forward"
-    strength="0 0 0.8"
+    strength="0 0 0.6"
     should_publish="true"
     >
     <origin xyz="-0.134 -0.269 0.049" rpy="3.14159265359 0 1.57079632679" />
@@ -262,7 +262,7 @@
   <xacro:magnet_plugin_macro
     namespace="${namespace}"
     suffix="9_right_back_forward"
-    strength="0 0 1"
+    strength="0 0 1.2"
     should_publish="true"
     >
     <origin xyz="-0.134 -0.269 0.105" rpy="3.14159265359 0 1.57079632679" />
@@ -271,7 +271,7 @@
   <xacro:magnet_plugin_macro
     namespace="${namespace}"
     suffix="7_right_front_backward"
-    strength="0 0 0.7"
+    strength="0 0 1.2"
     should_publish="true"
     >
     <origin xyz="0.127 -0.269 -0.006" rpy="0 0 -1.57079632679" />
@@ -280,7 +280,7 @@
   <xacro:magnet_plugin_macro
     namespace="${namespace}"
     suffix="8_right_front_backward"
-    strength="0 0 0.8"
+    strength="0 0 0.6"
     should_publish="true"
     >
     <origin xyz="0.127 -0.269 0.049" rpy="0 0 -1.57079632679" />
@@ -289,7 +289,7 @@
   <xacro:magnet_plugin_macro
     namespace="${namespace}"
     suffix="9_right_front_backward"
-    strength="0 0 1"
+    strength="0 0 1.2"
     should_publish="true"
     >
     <origin xyz="0.127 -0.269 0.105" rpy="0 0 -1.57079632679" />
@@ -298,7 +298,7 @@
   <xacro:magnet_plugin_macro
     namespace="${namespace}"
     suffix="10_left_front_forward"
-    strength="0 0 0.7"
+    strength="0 0 1.2"
     should_publish="true"
     >
     <origin xyz="0.127 0.278 -0.006" rpy="3.14159265359  0 -1.57079632679" />
@@ -307,7 +307,7 @@
   <xacro:magnet_plugin_macro
     namespace="${namespace}"
     suffix="11_left_front_forward"
-    strength="0 0 0.8"
+    strength="0 0 0.6"
     should_publish="true"
     >
     <origin xyz="0.127 0.278 0.049" rpy="3.14159265359   0 -1.57079632679" />
@@ -316,7 +316,7 @@
   <xacro:magnet_plugin_macro
     namespace="${namespace}"
     suffix="12_left_front_forward"
-    strength="0 0 1"
+    strength="0 0 1.2"
     should_publish="true"
     >
     <origin xyz="0.127 0.278 0.105" rpy="3.14159265359 0 -1.57079632679" />
@@ -325,7 +325,7 @@
   <xacro:magnet_plugin_macro
     namespace="${namespace}"
     suffix="10_left_back_backward"
-    strength="0 0 0.7"
+    strength="0 0 1.2"
     should_publish="true"
     >
     <origin xyz="-0.135 0.278 -0.006" rpy="0 0 1.57079632679" />
@@ -334,7 +334,7 @@
   <xacro:magnet_plugin_macro
     namespace="${namespace}"
     suffix="11_left_back_backward"
-    strength="0 0 0.8"
+    strength="0 0 0.6"
     should_publish="true"
     >
     <origin xyz="-0.135 0.278 0.049" rpy="0 0 1.57079632679" />
@@ -343,7 +343,7 @@
   <xacro:magnet_plugin_macro
     namespace="${namespace}"
     suffix="12_left_back_backward"
-    strength="0 0 1"
+    strength="0 0 1.2"
     should_publish="true"
     >
     <origin xyz="-0.135 0.278 0.105" rpy="0 0 1.57079632679" />
