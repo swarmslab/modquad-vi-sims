@@ -56,9 +56,6 @@ class position_control:
         rospy.wait_for_service('/modquad'+num+'/join_groups')
         Join_Group_Service = rospy.ServiceProxy('/modquad'+num+'/join_groups', set_group)
 
-        attach_srv = rospy.ServiceProxy('/link_attacher_node/attach', Attach)
-        attach_srv.wait_for_service()
-
         time_init = 0.0
         yaw_des = 0.0
         track_dock_init = False
@@ -93,9 +90,6 @@ class position_control:
 				0.0, 
 				'dock_finish', 
 				self.modquad_func_lib.get_target_ip())
-
-                    req = AttachRequest("modquad0", "base_link", "modquad1", "base_link")
-                    attach_srv.call(req)
 
                     rospy.loginfo("---- The quadrotors are docked! ----")
                 else:
@@ -243,8 +237,8 @@ class position_control:
 	            time_now = rospy.get_time()
                     t = time_now - time_init
 		    
-                    pose = self.modquad_func_lib.get_current_pose()
-                    vel = self.modquad_func_lib.get_current_vel()
+                    pose = self.modquad_func_lib.get_current_pose(self.num)
+                    vel = self.modquad_func_lib.get_current_vel(self.num)
 
                     des_trajectory = self.modquad_func_lib.two_pts_trajectory_generator(t, self.des_waypoint)
                     self.modquad_func_lib.pos_control(des_trajectory, pose, vel, yaw_des, time_now)

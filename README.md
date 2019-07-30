@@ -16,4 +16,6 @@ export GAZEBO_RESOURCE_PATH=${GAZEBO_RESOURCE_PATH}:~/ros_ws/src/big_modquad/big
 
 In addition, for the simulation you must change whycon's parameters. Go to wherever you installed whycon and edit include/whycon/circle_detector.h. Uncomment the default inner and outer diameters and put ```inner_diameter = 0.087``` and ```outer_diameter = 0.135``` for proper whycon tag distance in Gazebo.
 
+For simulation, make sure to ```git checkout experimental-sim``` and then compile the firmware with ```DONT_RUN=1 make px4_sitl_default gazebo```
+
 TODO: Describe setup for simulation and/or hardware AND usage

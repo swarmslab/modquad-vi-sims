@@ -6,6 +6,7 @@ Author: Guanrui Li lguanrui@seas.upenn.edu
 import rospy
 from modquad.srv import *
 from modquad.msg import *
+from gazebo_magnet.srv import *
 from geometry_msgs.msg import Vector3, Pose, PoseStamped, TwistStamped, PoseArray
 from std_msgs.msg import Bool
 from sensor_msgs.msg import Imu
@@ -22,10 +23,6 @@ from filter import kalmanfilter
 class modquad:
     curr_pose = PoseStamped()
     curr_vel = TwistStamped()
-    dock_curr_pose  = PoseStamped()
-    dock_curr_vel  = TwistStamped()
-    wait_curr_pose  = PoseStamped()
-    wait_curr_vel  = TwistStamped()
     average_pose = PoseStamped()
     average_vel = TwistStamped()
     curr_Imu = Imu()
@@ -55,6 +52,8 @@ class modquad:
         self.switch_control_hash_pub = {}
         self.joined_group_hash = {}
         self.set_control_hash = {}
+        self.pose_hash = {}
+        self.vel_hash = {}
         self.joined_groups = [self.num]
         '''
         ---------------------------------------Service initialization----------------------------------------------
@@ -62,7 +61,6 @@ class modquad:
         send_waypoint_service_init = rospy.Service('/modquad' + num + '/send_waypoint', sendwaypoint, self.handle_send_waypoint)
         send_groups_service_init = rospy.Service('/modquad' + num + '/join_groups', set_group, self.handle_groups)
         send_struct_waypoint_service_init = rospy.Service('/modquad' + num + '/send_struct_waypoint', sendwaypoint_struct, self.handle_send_struct_waypoint)
-        takoff_service_init = rospy.Service('/modquad' + num + '/take_off', takeoff, self.handle_take_off)
         dock_service_init = rospy.Service('/modquad' + num + '/dock', dock, self.handle_dock)
         track_service_init = rospy.Service('/modquad' + num + '/track',track,self.handle_track)
 
@@ -80,17 +78,20 @@ class modquad:
         '''
         if Environment == "gps":
             rospy.logwarn("---- MODQUAD USING GPS ----")
-            rospy.Subscriber('/modquad' + num + '/mavros' + num + '/local_position/pose', PoseStamped, callback=self.pose_cb)
-            rospy.Subscriber('/modquad' + num + '/mavros' + num + '/local_position/velocity', TwistStamped, callback=self.vel_cb)
-            rospy.Subscriber('/modquad0/mavros0/local_position/pose', PoseStamped, callback=self.docker_pose_cb)
-            rospy.Subscriber('/modquad0/mavros0/local_position/velocity', TwistStamped, callback=self.docker_vel_cb)
-            rospy.Subscriber('/modquad1/mavros1/local_position/pose', PoseStamped, callback=self.wait_pose_cb)
-            rospy.Subscriber('/modquad1/mavros1/local_position/velocity', TwistStamped, callback=self.wait_vel_cb)
-            #TODO: get rid of explicit methods above
+            for ID in self.robot_list:
+                topic_name = "/modquad" + str(ID) + "/mavros" + str(ID) + "/local_position"
+                rospy.Subscriber(topic_name + "/pose", 
+				PoseStamped, 
+				callback = self.__pose_cb, 
+				callback_args = ID)
+                rospy.Subscriber(topic_name + "/velocity", 
+				TwistStamped, 
+				callback = self.__vel_cb, 
+				callback_args = ID)
 
         elif (Environment == "mocap"):
             rospy.logwarn("---- MODQUAD USING MOCAP ----")
-            rospy.Subscriber('/modquad' + num + '/mavros' + num + '/vision_pose/pose', PoseStamped, callback=self.pose_cb)
+            rospy.Subscriber('/modquad' + num + '/mavros' + num + '/vision_pose/pose', PoseStamped, callback=self.__pose_cb)
 
         rospy.Subscriber('/modquad' + num + '/whycon' + num + '/poses',PoseArray,callback = self.vision_goal_cb)
         rospy.Subscriber('/modquad' + num + '/filtered_Vision_Odom',VisionOdom,callback = self.vision_odom_cb)
@@ -110,6 +111,8 @@ class modquad:
             self.set_control_hash[uavID] = rospy.Publisher('/modquad' + str(uavID) + '/mavros'+ str(uavID) +'/modquad_control/control_flag', CooperativeControl, queue_size = 10)
 
         self.SendWaypoint_Struct_Service = rospy.ServiceProxy('/modquad'+num+'/send_struct_waypoint', sendwaypoint_struct)
+        self.attach_srv = rospy.ServiceProxy('/link_attacher_node/attach', Attach)
+
         rospy.loginfo("INITIALIZATION FINISHED!")
 
     def pos_control_param_init(self,):
@@ -171,17 +174,13 @@ class modquad:
 
     def handle_groups(self, req):
         req.groups = [ord(encoded) for encoded in req.groups if type(encoded) is str] #decode from string to int
+        for link in req.groups:
+            self.attach_srv.call(AttachRequest("modquad" + str(self.num), 
+						"base_link", 
+						"modquad" + str(link), 
+						"base_link"))
         self.set_joined_groups(req.groups)
         return set_groupResponse("Group successfully joined")
-
-    def handle_take_off(self,req): #sends command to take off to one quad
-        waypoint = Vector3()
-        waypoint.x = self.curr_pose.pose.position.x
-        waypoint.y = self.curr_pose.pose.position.y
-        waypoint.z = req.height
-        waypoint.yaw = req.yaw
-        self.waypoint_pub.publish(waypoint)
-        return takeoffResponse(1,True)
 
     def handle_dock(self, req):
         if self.docked:
@@ -209,7 +208,7 @@ class modquad:
             self.switch_control_hash_pub[self.target_ip].publish(True)
             self.get_average_pose()
 	    self.get_average_vel()
-            orien = self.curr_pose.pose.orientation
+            orien = self.pose_hash[self.num].pose.orientation
             euler = qua2eu([orien.x,orien.y,orien.z,orien.w],'sxyz')
             yaw = euler[2] 
             rospy.logwarn("Publish switch control")
@@ -239,23 +238,25 @@ class modquad:
         if req.track_flag:
             return trackResponse('Quadrotor starts to track the tag. Initializing the trajectory')
         else:
-            orien = self.curr_pose.pose.orientation
+            orien = self.pose_hash[self.num].pose.orientation
             euler = qua2eu([orien.x,orien.y,orien.z,orien.w],'sxyz')
             yaw = euler[2]
-            self.SendWaypoint_Service[self.num](self.curr_pose.pose.position.x - 0.5, self.curr_pose.pose.position.y, self.curr_pose.pose.position.z, yaw)
+            self.SendWaypoint_Service[self.num](self.pose_hash[self.num].pose.position.x - 0.5, 
+		self.pose_hash[self.num].pose.position.y, 
+		self.pose_hash[self.num].pose.position.z, yaw)
             return trackResponse('Disabling track and rejecting tracking trajectory initialization')
 
     '''
     ------------------------------------------ Subscriber Callback function ----------------------------------------
     '''
 
-    def pose_cb(self,msg):
-        self.curr_pose = msg
+    def __pose_cb(self, msg, robot_id):
+        self.pose_hash[robot_id] = msg
 
-    def vel_cb(self,msg):
-        self.curr_vel = msg
+    def __vel_cb(self, msg, robot_id):
+        self.vel_hash[robot_id] = msg
 
-    def vision_goal_cb(self,msg):
+    def vision_goal_cb(self, msg):
         self.tag_pos_in_cam = np.matrix([msg.poses[0].position.x,msg.poses[0].position.y,\
                                               msg.poses[0].position.z,1]).transpose()
         self.curr_tag_position = np.matrix([msg.poses[0].position.x,msg.poses[0].position.y,\
@@ -266,18 +267,6 @@ class modquad:
         self.curr_vel.header = msg.header
         self.curr_pose.pose = msg.pose.pose
         self.curr_vel.twist = msg.twist.twist
-
-    def docker_pose_cb(self,msg):
-        self.dock_curr_pose = msg
-
-    def docker_vel_cb(self,msg):
-        self.dock_curr_vel = msg
-
-    def wait_pose_cb(self,msg):
-        self.wait_curr_pose = msg
-
-    def wait_vel_cb(self,msg):
-        self.wait_curr_vel = msg
 
     def mocap_odom_dock_robot_cb(self,msg):
         self.dock_curr_pose.header = msg.header
@@ -306,37 +295,57 @@ class modquad:
     def get_target_ip(self):
         return self.target_ip
 
-    def get_current_pose(self,):
-        return self.curr_pose
+    def get_current_pose(self, robot_id):
+        try:
+            return self.pose_hash[robot_id]
+        except KeyError:
+            p = PoseStamped()
+            p.header.frame_id = "map"
+            p.header.stamp = rospy.get_time()
+            p.pose.position.x = Vector3(0.0, 0.0, 0.0)
+            p.pose.orientation.x = 0.0
+            p.pose.orientation.y = 0.0
+            p.pose.orientation.z = 0.0
+            p.pose.orientation.w = 1.0
+            return p
 
-    def get_current_vel(self,):
-        return self.curr_vel
+    def get_current_vel(self, robot_id):
+        try:
+            return self.vel_hash[robot_id]
+        except KeyError:
+            v = TwistStamped()
+            v.header.frame_id = "map"
+            v.header.stamp = rospy.get_time()
+            v.twist.linear = Vector3(0.0, 0.0, 0.0)
+            v.twist.angular = Vector3(0.0, 0.0, 0.0)
+            return v
 
     def get_average_pose(self,):
-        '''self.average_pose.pose.position.x = self.curr_pose.pose.position.x + 0.2
-        self.average_pose.pose.position.y = self.curr_pose.pose.position.y + 0.2
-        self.average_pose.pose.position.z = self.curr_pose.pose.position.z + 0.2
-        self.average_pose.header = self.curr_pose.header
-        self.average_pose.pose.orientation = self.curr_pose.pose.orientation'''
-        self.average_pose.pose.position.x = (self.dock_curr_pose.pose.position.x + self.wait_curr_pose.pose.position.x)/2.0
-        self.average_pose.pose.position.y = (self.dock_curr_pose.pose.position.y + self.wait_curr_pose.pose.position.y)/2.0
-        self.average_pose.pose.position.z = (self.dock_curr_pose.pose.position.z + self.wait_curr_pose.pose.position.z)/2.0
-        self.average_pose.header = self.dock_curr_pose.header
-        self.average_pose.pose.orientation = self.dock_curr_pose.pose.orientation
+        self.average_pose.pose.position = Vector3(0.0, 0.0, 0.0)
+        for robot in self.joined_groups:
+            self.average_pose.pose.position.x += self.pose_hash[robot].pose.position.x
+            self.average_pose.pose.position.y += self.pose_hash[robot].pose.position.y
+            self.average_pose.pose.position.z += self.pose_hash[robot].pose.position.z
+        self.average_pose.header = self.pose_hash[self.num].header
+        self.average_pose.pose.orientation = self.pose_hash[self.num].pose.orientation
+        n_robots = len(self.joined_groups)
+        self.average_pose.pose.position.x /= n_robots
+        self.average_pose.pose.position.y /= n_robots
+        self.average_pose.pose.position.z /= n_robots
         return self.average_pose
 
     def get_average_vel(self,):
-        '''self.average_vel.twist.linear.x = self.curr_vel.twist.linear.x
-        self.average_vel.twist.linear.y = self.curr_vel.twist.linear.y
-        self.average_vel.twist.linear.z = self.curr_vel.twist.linear.z
-	self.average_vel.header = self.curr_vel.header
-        self.average_vel.twist.angular = self.curr_vel.twist.angular'''
-        
-        self.average_vel.twist.linear.x = (self.dock_curr_vel.twist.linear.x + self.wait_curr_vel.twist.linear.x)/2.0
-        self.average_vel.twist.linear.y = (self.dock_curr_vel.twist.linear.y + self.wait_curr_vel.twist.linear.y)/2.0
-	self.average_vel.twist.linear.z = (self.dock_curr_vel.twist.linear.z + self.wait_curr_vel.twist.linear.z)/2.0
-	self.average_vel.header = self.dock_curr_vel.header
-        self.average_vel.twist.angular = self.dock_curr_vel.twist.angular
+        self.average_vel.twist.linear = Vector3(0.0, 0.0, 0.0)
+        for robot in self.joined_groups:
+            self.average_vel.twist.linear.x += self.vel_hash[robot].twist.linear.x
+            self.average_vel.twist.linear.y += self.vel_hash[robot].twist.linear.y
+            self.average_vel.twist.linear.z += self.vel_hash[robot].twist.linear.z
+        self.average_vel.header = self.vel_hash[self.num].header
+        self.average_vel.twist.angular = self.vel_hash[self.num].twist.angular
+        n_robots = len(self.joined_groups)
+        self.average_vel.twist.linear.x /= n_robots
+        self.average_vel.twist.linear.y /= n_robots
+        self.average_vel.twist.linear.z /= n_robots
         
         return self.average_vel
 
@@ -345,10 +354,10 @@ class modquad:
 
     def get_start_position_local(self,):
         start_point = Waypoint()
-        start_point.x = self.curr_pose.pose.position.x
-        start_point.y = self.curr_pose.pose.position.y
-        start_point.z = self.curr_pose.pose.position.z
-        orien = self.curr_pose.pose.orientation
+        start_point.x = self.pose_hash[self.num].pose.position.x
+        start_point.y = self.pose_hash[self.num].pose.position.y
+        start_point.z = self.pose_hash[self.num].pose.position.z
+        orien = self.pose_hash[self.num].pose.orientation
         euler = qua2eu([orien.x,orien.y,orien.z,orien.w],'sxyz')
         start_point.yaw = euler[2] 
         start_point.updated = False
@@ -366,25 +375,6 @@ class modquad:
 
     def get_Imu(self,):
         return self.curr_Imu
-
-    def get_dock_position(self, curr_pose):
-        dock_position = Waypoint()
-        curr_quaternion = [curr_pose.pose.orientation.x, curr_pose.pose.orientation.y,
-                           curr_pose.pose.orientation.z, curr_pose.pose.orientation.w]
-        H_quad_local = np.matrix(tf.transformations.quaternion_matrix(curr_quaternion))
-        r_quad_local = np.matrix(
-            [curr_pose.pose.position.x, curr_pose.pose.position.y, curr_pose.pose.position.z]).transpose()
-
-        H_quad_local[:3, 3] = r_quad_local
-
-        r_tag_local = H_quad_local * self.H_cam_quad1 * self.tag_pos_in_cam
-
-        dock_position.x = r_tag_local[0]
-        dock_position.y = r_tag_local[1]
-        dock_position.z = r_tag_local[2]
-        dock_position.updated = True
-        #print dock_position
-        return dock_position
 
     def get_joined_groups(self):
         return self.joined_groups
@@ -632,7 +622,7 @@ class modquad:
 
 	Imu_norm = np.linalg.norm(self.Imu_queue, 2)
 
-	if curr_odom[2] < 0.2 and Imu_norm > 2.9: #2.9 is arbitrary, looking for IMU jump when z distance is less than 20cm
+	if curr_odom[2] < 0.2 and Imu_norm > 2: #2 is arbitrary, looking for IMU jump when z distance is less than 20cm
 		dock_state = True
 	else:
 		dock_state = False
@@ -663,7 +653,7 @@ class modquad:
 	self.dock_detector(self.tag_pos_in_cam, self.curr_Imu)
 
     def check_dock_state(self,):
-	    return self.dock_state
+	return self.dock_state
 	
     def pub_docked_state_to_px4(self,dock_state):
         if dock_state:
