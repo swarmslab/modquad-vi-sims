@@ -82,6 +82,11 @@ class modquad:
             rospy.logwarn("---- MODQUAD USING GPS ----")
             rospy.Subscriber('/modquad' + num + '/mavros' + num + '/local_position/pose', PoseStamped, callback=self.pose_cb)
             rospy.Subscriber('/modquad' + num + '/mavros' + num + '/local_position/velocity', TwistStamped, callback=self.vel_cb)
+            rospy.Subscriber('/modquad0/mavros0/local_position/pose', PoseStamped, callback=self.docker_pose_cb)
+            rospy.Subscriber('/modquad0/mavros0/local_position/velocity', TwistStamped, callback=self.docker_vel_cb)
+            rospy.Subscriber('/modquad1/mavros1/local_position/pose', PoseStamped, callback=self.wait_pose_cb)
+            rospy.Subscriber('/modquad1/mavros1/local_position/velocity', TwistStamped, callback=self.wait_vel_cb)
+            #TODO: get rid of explicit methods above
 
         elif (Environment == "mocap"):
             rospy.logwarn("---- MODQUAD USING MOCAP ----")
@@ -99,7 +104,7 @@ class modquad:
         for uavID in self.robot_list:
 	    self.switch_control_hash_pub[uavID] = rospy.Publisher('/modquad' + str(uavID) + '/switch_control', Bool, queue_size=10)
             rospy.wait_for_service('/modquad'+ str(uavID) +'/join_groups')
-            self.joined_group_hash[uavID] = rospy.ServiceProxy('modquad'+str(uavID)+'/join_groups', set_group)
+            self.joined_group_hash[uavID] = rospy.ServiceProxy('/modquad'+str(uavID)+'/join_groups', set_group)
             rospy.wait_for_service('/modquad'+ str(uavID) +'/send_waypoint')
             self.SendWaypoint_Service[uavID] = rospy.ServiceProxy('/modquad'+ str(uavID) +'/send_waypoint', sendwaypoint)
             self.set_control_hash[uavID] = rospy.Publisher('/modquad' + str(uavID) + '/mavros'+ str(uavID) +'/modquad_control/control_flag', CooperativeControl, queue_size = 10)
@@ -128,10 +133,10 @@ class modquad:
         self.Ki_track = Vector3()
         self.Kp_track.x = 3.5
         self.Kp_track.y = 3.5
-        self.Kp_track.z = 2.2
-        self.Kd_track.x = 1.0 
-        self.Kd_track.y = 1.0
-        self.Kd_track.z = 2.5
+        self.Kp_track.z = 0.8
+        self.Kd_track.x = 0.3 
+        self.Kd_track.y = 0.3
+        self.Kd_track.z = 0.5
         self.Ki_track.x = 0.01
         self.Ki_track.y = 0.01
         self.Ki_track.z = 0.01
@@ -237,7 +242,7 @@ class modquad:
             orien = self.curr_pose.pose.orientation
             euler = qua2eu([orien.x,orien.y,orien.z,orien.w],'sxyz')
             yaw = euler[2]
-            self.SendWaypoint_Service[self.num](self.curr_pose.pose.position.x - 0.5, self.curr_pose.pose.position.y, self.curr_pose.pose.position.z + 0.2,yaw)
+            self.SendWaypoint_Service[self.num](self.curr_pose.pose.position.x - 0.5, self.curr_pose.pose.position.y, self.curr_pose.pose.position.z, yaw)
             return trackResponse('Disabling track and rejecting tracking trajectory initialization')
 
     '''
@@ -261,6 +266,18 @@ class modquad:
         self.curr_vel.header = msg.header
         self.curr_pose.pose = msg.pose.pose
         self.curr_vel.twist = msg.twist.twist
+
+    def docker_pose_cb(self,msg):
+        self.dock_curr_pose = msg
+
+    def docker_vel_cb(self,msg):
+        self.dock_curr_vel = msg
+
+    def wait_pose_cb(self,msg):
+        self.wait_curr_pose = msg
+
+    def wait_vel_cb(self,msg):
+        self.wait_curr_vel = msg
 
     def mocap_odom_dock_robot_cb(self,msg):
         self.dock_curr_pose.header = msg.header
@@ -296,6 +313,11 @@ class modquad:
         return self.curr_vel
 
     def get_average_pose(self,):
+        '''self.average_pose.pose.position.x = self.curr_pose.pose.position.x + 0.2
+        self.average_pose.pose.position.y = self.curr_pose.pose.position.y + 0.2
+        self.average_pose.pose.position.z = self.curr_pose.pose.position.z + 0.2
+        self.average_pose.header = self.curr_pose.header
+        self.average_pose.pose.orientation = self.curr_pose.pose.orientation'''
         self.average_pose.pose.position.x = (self.dock_curr_pose.pose.position.x + self.wait_curr_pose.pose.position.x)/2.0
         self.average_pose.pose.position.y = (self.dock_curr_pose.pose.position.y + self.wait_curr_pose.pose.position.y)/2.0
         self.average_pose.pose.position.z = (self.dock_curr_pose.pose.position.z + self.wait_curr_pose.pose.position.z)/2.0
@@ -304,11 +326,18 @@ class modquad:
         return self.average_pose
 
     def get_average_vel(self,):
+        '''self.average_vel.twist.linear.x = self.curr_vel.twist.linear.x
+        self.average_vel.twist.linear.y = self.curr_vel.twist.linear.y
+        self.average_vel.twist.linear.z = self.curr_vel.twist.linear.z
+	self.average_vel.header = self.curr_vel.header
+        self.average_vel.twist.angular = self.curr_vel.twist.angular'''
+        
         self.average_vel.twist.linear.x = (self.dock_curr_vel.twist.linear.x + self.wait_curr_vel.twist.linear.x)/2.0
         self.average_vel.twist.linear.y = (self.dock_curr_vel.twist.linear.y + self.wait_curr_vel.twist.linear.y)/2.0
 	self.average_vel.twist.linear.z = (self.dock_curr_vel.twist.linear.z + self.wait_curr_vel.twist.linear.z)/2.0
 	self.average_vel.header = self.dock_curr_vel.header
         self.average_vel.twist.angular = self.dock_curr_vel.twist.angular
+        
         return self.average_vel
 
     def get_current_vision_odom(self,):
@@ -603,7 +632,7 @@ class modquad:
 
 	Imu_norm = np.linalg.norm(self.Imu_queue, 2)
 
-	if curr_odom[2] < 0.2 and Imu_norm > 2.1: #2.1 is arbitrary, but looking for IMU jump when z distance is less than 20cm
+	if curr_odom[2] < 0.2 and Imu_norm > 2.9: #2.9 is arbitrary, looking for IMU jump when z distance is less than 20cm
 		dock_state = True
 	else:
 		dock_state = False

@@ -8,10 +8,10 @@ from modquad.srv import *
 from modquad.msg import *
 from modquad_init import modquad
 from geometry_msgs.msg import Quaternion, Vector3,PoseStamped, TwistStamped,PoseArray
+from gazebo_magnet.srv import *
 from mavros_msgs.msg import AttitudeTarget, Thrust, State, PositionTarget
 from nav_msgs.msg import Odometry
 from std_msgs.msg import Bool
-from tf.transformations import quaternion_from_euler, euler_from_quaternion
 import numpy as np
 import pdb
 import sys
@@ -56,6 +56,9 @@ class position_control:
         rospy.wait_for_service('/modquad'+num+'/join_groups')
         Join_Group_Service = rospy.ServiceProxy('/modquad'+num+'/join_groups', set_group)
 
+        attach_srv = rospy.ServiceProxy('/link_attacher_node/attach', Attach)
+        attach_srv.wait_for_service()
+
         time_init = 0.0
         yaw_des = 0.0
         track_dock_init = False
@@ -80,7 +83,7 @@ class position_control:
 	    #print track_flag
             if track_flag&dock_flag&tag_detected:
                 if docked_state.data:
-                    self.modquad_func_lib.pub_docked_state_to_px4(docked_state)
+                    #self.modquad_func_lib.pub_docked_state_to_px4(docked_state)
                     Track_Service(False, 
 				'back', 
 				0.0, 
@@ -90,18 +93,22 @@ class position_control:
 				0.0, 
 				'dock_finish', 
 				self.modquad_func_lib.get_target_ip())
+
+                    req = AttachRequest("modquad0", "base_link", "modquad1", "base_link")
+                    attach_srv.call(req)
+
                     rospy.loginfo("---- The quadrotors are docked! ----")
                 else:
                         if dock_method == "trajectory":
                             rospy.loginfo("Tag detection OK. Quadrotor beginning to dock.")
                             if track_dock_init == True:
-                                dock_waypoint = Waypoint(-0.35, 0.0, 0.0, 0.0, False)
-                                #0.35 = length of one side of quad + camera-side distance in m
+                                dock_waypoint = Waypoint(-0.2, 0.06, -0.18, 0.0, False)
+                                #0.26 = length of one side of quad + camera-side distance in m
 				#remember that modquad has a square frame, so it's the length of one side
                                 start_point = self.modquad_func_lib.get_start_position_tag_frame()
 				#get position of tag in relation to quad frame
                                 t0 = 0
-                                tf = 30 #timeout of 6 seconds?
+                                tf = 6 #timeout of 6 seconds?
                                 self.modquad_func_lib.two_pts_trajectory_init(start_point, dock_waypoint,t0,tf) #solve Ax = b for A and calculate x,y,z, and yaw coefficients 
                                 time_init = rospy.get_time()
                                 Dock_Service(True,
@@ -169,7 +176,8 @@ class position_control:
             elif track_flag&(not dock_flag)&tag_detected:
                 rospy.loginfo("The tag is detected and the quad starts to track")
                 if track_dock_init == False:
-                    track_waypoint = Waypoint(-1.0, 0.0, 0.0, 0.0, False) #this is RELATIVE to the hovering quad
+                    track_waypoint = Waypoint(-0.7, 0.06, -0.18, 0.0, False) 
+		    #this is RELATIVE to the hovering quad, we also account for camera height
                     start_point = self.modquad_func_lib.get_start_position_tag_frame()
                     t0 = 0
                     tf = 6 
@@ -193,7 +201,6 @@ class position_control:
 									yaw_des,
 									time_now,
 									self.num)
-                print(des_trajectory)                
 
                 Track_Service(True,
 				'back', 

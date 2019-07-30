@@ -12,15 +12,7 @@
   <arg name="verbose" default="false"/>
   <arg name="paused" default="false"/>
 
-  <include file="$(find gazebo_ros)/launch/empty_world.launch">
-      <arg name="gui" value="$(arg gui)"/>
-      <arg name="world_name" value="$(arg world)"/>
-      <arg name="debug" value="$(arg debug)"/>
-      <arg name="verbose" value="$(arg verbose)"/>
-      <arg name="paused" value="$(arg paused)"/>
-  </include>
-
-  <group ns="modquad0">
+  <!--group ns="modquad0">
     <arg name="ip_addr" default="0"/>
     <arg name="modquad_name" default="$(eval arg('name') + '0')" />
     <arg name="mavros_name" default="$(eval 'mavros' + '0')" />
@@ -29,7 +21,6 @@
     <param name="Environment" type="string" value="$(arg Environment)"/>
     <param name="RobotsNumber"  value="$(arg robots_number)"/>
     <rosparam param="robot_list">[0,1]</rosparam>
-    <!--unfortunately we cant substitute in a global robot_list due to a ROS decode bug-->
 
     <node pkg="modquad" name="$(arg modquad_name)" type="pos_control.py" output="screen">
     </node>
@@ -64,9 +55,9 @@
         <arg name="ID" value="$(arg ip_addr)"/>
         <arg name="namespace" value="$(arg modquad_name)"/>
     </include>
-  </group>
+  </group-->
 
-  <!--group ns="modquad1">
+  <group ns="modquad1">
     <arg name="ip_addr" default="1"/>
     <arg name="modquad_name" default="$(eval arg('name') + '1')" />
     <arg name="mavros_name" default="$(eval 'mavros' + '1')" />
@@ -98,7 +89,7 @@
     </include>
 
     <include file="$(find modquad)/launch/single_vehicle_spawn.launch">
-        <arg name="x" value="1"/>
+        <arg name="x" value="0"/>
         <arg name="y" value="0"/>
         <arg name="z" value="0"/>
         <arg name="R" value="0"/>
@@ -109,5 +100,5 @@
         <arg name="ID" value="$(arg ip_addr)"/>
         <arg name="namespace" value="$(arg modquad_name)"/>
     </include>
-  </group-->
+  </group>
 </launch>

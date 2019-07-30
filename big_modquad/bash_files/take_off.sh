@@ -6,7 +6,7 @@ z: 1.0
 yaw: 0.0"
 echo "Modquad0 take off"
 
-rosservice call /modquad1/send_waypoint "x: 1.0
+rosservice call /modquad1/send_waypoint "x: 1.5
 y: 0.0
 z: 1.0
 yaw: 0.0"                                       
