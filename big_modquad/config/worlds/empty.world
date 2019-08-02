@@ -31,5 +31,44 @@
       <real_time_update_rate>250</real_time_update_rate>
       <magnetic_field>6.0e-6 2.3e-5 -4.2e-5</magnetic_field>
     </physics>
+    <model name='camera'>
+      <static>true</static>
+      <pose>2 0 5 0 1.57079632679 0</pose>
+      <link name='link'>
+        <sensor name='recorder' type='camera'>
+          <camera>
+            <save enabled="false">
+              <path>/tmp/camera_recorder</path>
+            </save>
+            <horizontal_fov>2.0</horizontal_fov>
+            <image>
+              <width>1280</width>
+              <height>720</height>
+            </image>
+            <clip>
+              <near>0.1</near>
+              <far>100</far>
+            </clip>
+          </camera>
+          <always_on>1</always_on>
+          <update_rate>30</update_rate>
+        <plugin name="camera_publisher" filename="libgazebo_ros_camera.so">
+          <robotNamespace>world</robotNamespace>
+          <alwaysOn>true</alwaysOn>
+          <updateRate>30</updateRate>
+          <cameraName>virtual_viewer</cameraName>
+          <imageTopicName>image_raw</imageTopicName>
+          <cameraInfoTopicName>camera_info</cameraInfoTopicName>
+          <frameName>viewer</frameName>
+          <hackBaseline>0.0</hackBaseline>
+          <distortionK1>0.0</distortionK1>
+          <distortionK2>0.0</distortionK2>
+          <distortionK3>0.0</distortionK3>
+          <distortionT1>0.0</distortionT1>
+          <distortionT2>0.0</distortionT2>
+        </plugin>
+        </sensor>
+      </link>
+    </model>
   </world>
 </sdf>
