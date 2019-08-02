@@ -1,9 +1,10 @@
 <?xml version="1.0"?>
 
 <launch>
-  <arg name="robots_number" default="2"/>
+  <arg name="robots_number" default="3"/>
   <arg name="Environment" default="gps"/>
   <arg name="name" value="modquad"/>
+  <arg name="robot_list" value="[0,1,2]"/>
 
   <arg name="est" default="ekf2"/>
   <arg name="world" default="$(find modquad)/config/worlds/empty.world"/>
@@ -32,8 +33,7 @@
     <param name="RobotsNumber"  value="$(arg robots_number)"/>
     <param name="x_orig" value="$(arg x_orig)"/>
     <param name="y_orig" value="$(arg y_orig)"/>
-    <rosparam param="robot_list">[0,1]</rosparam>
-    <!--unfortunately we cant substitute in a global robot_list due to a ROS decode bug-->
+    <rosparam param="robot_list" subst_value="True">$(arg robot_list)</rosparam>
 
     <node pkg="modquad" name="$(arg modquad_name)" type="pos_control.py" output="screen">
     </node>
@@ -82,7 +82,7 @@
     <param name="RobotsNumber"  value="$(arg robots_number)"/>
     <param name="x_orig" value="$(arg x_orig)"/>
     <param name="y_orig" value="$(arg y_orig)"/>
-    <rosparam param="robot_list">[0,1]</rosparam>
+    <rosparam param="robot_list" subst_value="True">$(arg robot_list)</rosparam>
 
     <node pkg="modquad" name="$(arg modquad_name)" type="pos_control.py" output="screen">
     </node>
@@ -91,8 +91,8 @@
     </node>
 
     <node name="whycon1" type="whycon" pkg="whycon" output="screen">
-      <remap from="/camera/image_rect_color" to="$(eval '/' + arg('modquad_name') + '/camera/image_raw')"/>
-      <remap from="/camera/camera_info" to="$(eval '/' + arg('modquad_name') + '/camera/camera_info')"/>
+      <remap from="/camera/image_rect_color" to="$(eval '/' + arg('modquad_name') + '/camera_image/image_raw')"/>
+      <remap from="/camera/camera_info" to="$(eval '/' + arg('modquad_name') + '/camera_image/camera_info')"/>
       <param name="targets" value="$(arg targets)"/>
       <param name="name" value="whycon1"/>
     </node>
@@ -118,4 +118,102 @@
         <arg name="namespace" value="$(arg modquad_name)"/>
     </include>
   </group>
+
+  <group ns="modquad2">
+    <arg name="ip_addr" default="2"/>
+    <arg name="modquad_name" default="$(eval arg('name') + '2')" />
+    <arg name="mavros_name" default="$(eval 'mavros' + '2')" />
+    <arg name="targets" default="1"/>
+    <arg name="x_orig" default="2.0"/>
+    <arg name="y_orig" default="0.0"/>
+    <param name="ip_addr" value="$(arg ip_addr)"/>
+    <param name="Environment" type="string" value="$(arg Environment)"/>
+    <param name="RobotsNumber"  value="$(arg robots_number)"/>
+    <param name="x_orig" value="$(arg x_orig)"/>
+    <param name="y_orig" value="$(arg y_orig)"/>
+    <rosparam param="robot_list" subst_value="True">$(arg robot_list)</rosparam>
+
+    <node pkg="modquad" name="$(arg modquad_name)" type="pos_control.py" output="screen">
+    </node>
+
+    <node pkg="modquad" name="modquadfilter2" type="filter.py" output="screen">
+    </node>
+
+    <node name="whycon2" type="whycon" pkg="whycon" output="screen">
+      <remap from="/camera/image_rect_color" to="$(eval '/' + arg('modquad_name') + '/camera_image/image_raw')"/>
+      <remap from="/camera/camera_info" to="$(eval '/' + arg('modquad_name') + '/camera_image/camera_info')"/>
+      <param name="targets" value="$(arg targets)"/>
+      <param name="name" value="whycon2"/>
+    </node>
+
+    <include file="$(find modquad)/launch/px4.launch">
+	<arg name="mavros_name" value="$(arg mavros_name)" />
+	<arg name="fcu_url" value="udp://:14542@localhost:14582" />
+        <arg name="tgt_system" value="$(eval 1 + arg('ip_addr'))"/>
+        <arg name="tgt_component" value="1"/>
+        <arg name="gcs_url" value=""/>
+    </include>
+
+    <include file="$(find modquad)/launch/single_vehicle_spawn.launch">
+        <arg name="x" value="$(arg x_orig)"/>
+        <arg name="y" value="$(arg y_orig)"/>
+        <arg name="z" value="0"/>
+        <arg name="R" value="0"/>
+        <arg name="P" value="0"/>
+        <arg name="Y" value="0"/>
+        <arg name="mavlink_udp_port" value="$(eval 14560 + arg('ip_addr'))"/>
+        <arg name="mavlink_tcp_port" value="$(eval 4560 + arg('ip_addr'))"/>
+        <arg name="ID" value="$(arg ip_addr)"/>
+        <arg name="namespace" value="$(arg modquad_name)"/>
+    </include>
+  </group>
+
+  <!--group ns="modquad3">
+    <arg name="ip_addr" default="3"/>
+    <arg name="modquad_name" default="$(eval arg('name') + '3')" />
+    <arg name="mavros_name" default="$(eval 'mavros' + '3')" />
+    <arg name="targets" default="1"/>
+    <arg name="x_orig" default="3.0"/>
+    <arg name="y_orig" default="0.0"/>
+    <param name="ip_addr" value="$(arg ip_addr)"/>
+    <param name="Environment" type="string" value="$(arg Environment)"/>
+    <param name="RobotsNumber"  value="$(arg robots_number)"/>
+    <param name="x_orig" value="$(arg x_orig)"/>
+    <param name="y_orig" value="$(arg y_orig)"/>
+    <rosparam param="robot_list" subst_value="True">$(arg robot_list)</rosparam>
+
+    <node pkg="modquad" name="$(arg modquad_name)" type="pos_control.py" output="screen">
+    </node>
+
+    <node pkg="modquad" name="modquadfilter3" type="filter.py" output="screen">
+    </node>
+
+    <node name="whycon1" type="whycon" pkg="whycon" output="screen">
+      <remap from="/camera/image_rect_color" to="$(eval '/' + arg('modquad_name') + '/camera_image/image_raw')"/>
+      <remap from="/camera/camera_info" to="$(eval '/' + arg('modquad_name') + '/camera_image/camera_info')"/>
+      <param name="targets" value="$(arg targets)"/>
+      <param name="name" value="whycon3"/>
+    </node>
+
+    <include file="$(find modquad)/launch/px4.launch">
+	<arg name="mavros_name" value="$(arg mavros_name)" />
+	<arg name="fcu_url" value="udp://:14543@localhost:14583" />
+        <arg name="tgt_system" value="$(eval 1 + arg('ip_addr'))"/>
+        <arg name="tgt_component" value="1"/>
+        <arg name="gcs_url" value=""/>
+    </include>
+
+    <include file="$(find modquad)/launch/single_vehicle_spawn.launch">
+        <arg name="x" value="$(arg x_orig)"/>
+        <arg name="y" value="$(arg y_orig)"/>
+        <arg name="z" value="0"/>
+        <arg name="R" value="0"/>
+        <arg name="P" value="0"/>
+        <arg name="Y" value="0"/>
+        <arg name="mavlink_udp_port" value="$(eval 14560 + arg('ip_addr'))"/>
+        <arg name="mavlink_tcp_port" value="$(eval 4560 + arg('ip_addr'))"/>
+        <arg name="ID" value="$(arg ip_addr)"/>
+        <arg name="namespace" value="$(arg modquad_name)"/>
+    </include>
+  </group-->
 </launch>

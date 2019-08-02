@@ -6,14 +6,10 @@ Author: Guanrui Li lguanrui@seas.upenn.edu
 import rospy
 from modquad.srv import *
 from modquad.msg import *
-from tf.transformations import *
-from geometry_msgs.msg import Vector3, PoseStamped, TwistStamped, PoseArray
-from std_msgs.msg import Bool
+from tf.transformations import quaternion_matrix
+from geometry_msgs.msg import PoseArray
 from sensor_msgs.msg import Imu
-from mavros_msgs.msg import AttitudeTarget, Thrust, State
 import numpy as np
-import pdb
-import tf
 import numpy.linalg as LA
 
 class kalmanfilter:
@@ -25,7 +21,7 @@ class kalmanfilter:
         self.pub_and_sub_init()
         self.parameter_init()
       
-        rate = rospy.Rate(40)  # Hz
+        rate = rospy.Rate(50)  # Hz
         rate.sleep()
 
         while not rospy.is_shutdown():
@@ -37,12 +33,9 @@ class kalmanfilter:
             Prediction = self.Prediction(input)
 
             if self.image_updated:
-                #print input
                 mu = self.update(Prediction[0],Prediction[1],self.whycon_position,Imu)
                 self.image_updated = False
-
             else:
-
                 mu = Prediction[0]
                 self.last_mu_bar = Prediction[0]
                 self.last_Sigma = Prediction[1]
@@ -87,7 +80,6 @@ class kalmanfilter:
         Vision_Odom.header.stamp.secs = now.secs
         Vision_Odom.header.stamp.nsecs = now.nsecs
         if self.mu_init:
-                #mu = np.multiply(self.k, self.mu_prev) + np.multiply((1-self.k),mu)
 		Vision_Odom.position.x = mu[0, 0]
 		Vision_Odom.position.y = mu[1, 0]
 		Vision_Odom.position.z = mu[2, 0]
@@ -105,7 +97,6 @@ class kalmanfilter:
         self.mu_prev = mu
         Vision_Odom.orientation = self.Imu.orientation
         return Vision_Odom
-        #print mu
 
     def image_detection_cb(self,msg):
         self.whycon_position = msg
@@ -123,7 +114,7 @@ class kalmanfilter:
         self.x = np.matrix(np.zeros((9,1)))
         self.last_mu_bar = np.matrix(np.zeros((9,1)))
 
-        self.DT = 0.01
+        self.DT = 0.02
         error_cam_x = 0.1132 #5.36698e-05 #0.05
         error_cam_y = 0.1984 #2.91742e-05 #0.001
         error_cam_z = 0.2245 #2.72226e-05 #0.001
@@ -142,7 +133,6 @@ class kalmanfilter:
         bias_accel_x = 0.3
         bias_accel_y = 0.3
         bias_accel_z = 0.1
-
 
         self.I = np.identity(9)
 
@@ -186,7 +176,6 @@ class kalmanfilter:
         self.Q2 = self.I * noise_vector
 
         self.last_Sigma = np.matrix(np.zeros((9,9)))
-
 
         self.R_w_waitmod = np.matrix([[0, -1, 0],
                            [1, 0, 0],
@@ -262,13 +251,6 @@ class kalmanfilter:
         self.last_Rotation_matrix = self.get_Rotation_matrix(Imu)
         self.last_acceleration = np.matrix(
             [[Imu.linear_acceleration.x], [Imu.linear_acceleration.y], [Imu.linear_acceleration.z]])
-
-
-    def check_acceleration(self,Imu,mu):
-        print  Imu.linear_acceleration.z 
-        print  mu[8]
-        print  Imu.linear_acceleration.z - mu[8]
-
 
 if __name__ == "__main__":
     kalmanfilter()

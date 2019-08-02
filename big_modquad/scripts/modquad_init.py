@@ -7,18 +7,14 @@ import rospy
 from modquad.srv import *
 from modquad.msg import *
 from gazebo_magnet.srv import *
-from geometry_msgs.msg import Vector3, Pose, PoseStamped, TwistStamped, PoseArray
+from geometry_msgs.msg import Vector3, PoseStamped, TwistStamped, PoseArray
 from std_msgs.msg import Bool
 from sensor_msgs.msg import Imu
-from nav_msgs.msg import Odometry
-from mavros_msgs.msg import AttitudeTarget, Thrust, State, CooperativeControl
+from mavros_msgs.msg import AttitudeTarget, Thrust, CooperativeControl
 import numpy as np
-import pdb
 import tf
 from tf.transformations import euler_from_quaternion as qua2eu 
-from tf.transformations import euler_matrix as eumat 
 import numpy.linalg as LA
-from filter import kalmanfilter
 
 class modquad:
     curr_pose = PoseStamped()
@@ -51,6 +47,7 @@ class modquad:
         self.x_orig = rospy.get_param("x_orig") 
         self.y_orig = rospy.get_param("y_orig") 
         self.SendWaypoint_Service = {}
+        self.waypoint_pub = {}
         self.switch_control_hash_pub = {}
         self.joined_group_hash = {}
         self.set_control_hash = {}
@@ -70,7 +67,6 @@ class modquad:
         -------------------------------------Publisher initialization----------------------------------------------
         '''
 
-        self.waypoint_pub = rospy.Publisher('/modquad' + num + '/waypoint', Waypoint, queue_size=10)
         self.mavros_attitude_pub = rospy.Publisher('/modquad' + num + '/mavros'+num+'/setpoint_raw/attitude', AttitudeTarget, queue_size=10)
         self.mavros_thrust_pub = rospy.Publisher('/modquad' + num + '/mavros'+num+'/setpoint_attitude/thrust', Thrust, queue_size=10)
 	self.docked_pub = rospy.Publisher('/modquad' + num + '/modquad_docked', Bool, queue_size=10)
@@ -90,6 +86,10 @@ class modquad:
 				PoseStamped, 
 				callback = self.__pose_cb, 
 				callback_args = ID)
+                rospy.Subscriber("/modquad" + str(ID) + "/corrected_local_pose", 
+				PoseStamped, 
+				callback = self.__modquad_pose_cb, 
+				callback_args = ID)
                 rospy.Subscriber(topic_name + "/velocity", 
 				TwistStamped, 
 				callback = self.__vel_cb, 
@@ -107,13 +107,13 @@ class modquad:
         '''
         ---------------------------Service Proxy initialization-----------------------------------
         '''
-        #self.robot_list = [ord(encoded) for encoded in self.robot_list if type(encoded) is str] #decode from string to int
         for uavID in self.robot_list:
 	    self.switch_control_hash_pub[uavID] = rospy.Publisher('/modquad' + str(uavID) + '/switch_control', Bool, queue_size=10)
             rospy.wait_for_service('/modquad'+ str(uavID) +'/join_groups')
             self.joined_group_hash[uavID] = rospy.ServiceProxy('/modquad'+str(uavID)+'/join_groups', set_group)
             rospy.wait_for_service('/modquad'+ str(uavID) +'/send_waypoint')
             self.SendWaypoint_Service[uavID] = rospy.ServiceProxy('/modquad'+ str(uavID) +'/send_waypoint', sendwaypoint)
+            self.waypoint_pub[uavID] = rospy.Publisher('/modquad'+ str(uavID) +'/waypoint', Waypoint, queue_size=10)
             self.set_control_hash[uavID] = rospy.Publisher('/modquad' + str(uavID) + '/mavros'+ str(uavID) +'/modquad_control/control_flag', CooperativeControl, queue_size = 10)
 
         self.SendWaypoint_Struct_Service = rospy.ServiceProxy('/modquad'+num+'/send_struct_waypoint', sendwaypoint_struct)
@@ -122,38 +122,19 @@ class modquad:
         rospy.loginfo("INITIALIZATION FINISHED!")
 
     def pos_control_param_init(self,):
-        self.Kp = Vector3()
-        self.Kd = Vector3()
-	self.ki = Vector3()
-        self.Kp.x = 3.5
-        self.Kp.y = 3.5
-        self.Kp.z = 3.2
-        self.Kd.x = 1.0
-        self.Kd.y = 1.0
-        self.Kd.z = 1.0
-        self.ki.x = 0.01
-        self.ki.y = 0.01
-        self.ki.z = 0.02
+        self.Kp = Vector3(3.5, 3.5, 3.2)
+        self.Kd = Vector3(1.0, 1.0, 1.0)
+	self.ki = Vector3(0.01, 0.01, 0.02)
 	#These are parameters for Gazebo models only
 
     def track_control_param_init(self, ):
-        self.Kp_track = Vector3()
-        self.Kd_track = Vector3()
-        self.Ki_track = Vector3()
-        self.Kp_track.x = 3.5
-        self.Kp_track.y = 3.5
-        self.Kp_track.z = 0.8
-        self.Kd_track.x = 0.3 
-        self.Kd_track.y = 0.3
-        self.Kd_track.z = 0.5
-        self.Ki_track.x = 0.01
-        self.Ki_track.y = 0.01
-        self.Ki_track.z = 0.01
+        self.Kp_track = Vector3(3.5, 3.5, 0.8)
+        self.Kd_track = Vector3(0.3, 0.3, 0.5)
+        self.Ki_track = Vector3(0.01, 0.01, 0.01)
 
     def quadrotor_physical_parameter(self,num):
 	self.m = 0.06
         self.g = 9.81
-        self.H_cam_quad1 = np.matrix([[0,0,1,0.106],[-1,0,0,0],[0,-1,0,0.07],[0,0,0,1]])
 
     '''
     -------------------------------------------------Service handle------------------------------------------------
@@ -175,7 +156,8 @@ class modquad:
         waypoint.y = req.y
         waypoint.z = req.z
         waypoint.yaw = req.yaw
-        self.waypoint_pub.publish(waypoint)
+        for ID in self.joined_groups:
+            self.waypoint_pub[ID].publish(waypoint)
         return sendwaypointResponse(True)
 
     def handle_groups(self, req):
@@ -215,11 +197,10 @@ class modquad:
             self.get_average_pose()
 	    self.get_average_vel()
             orien = self.pose_hash[self.num].pose.orientation
-            euler = qua2eu([orien.x,orien.y,orien.z,orien.w],'sxyz')
-            yaw = euler[2] 
+            yaw = qua2eu([orien.x,orien.y,orien.z,orien.w],'sxyz')[2]
             rospy.logwarn("Publish switch control")
-            self.SendWaypoint_Struct_Service(self.robot_list,self.average_pose.pose.position.x, self.average_pose.pose.position.y, self.average_pose.pose.position.z,yaw)
             self.joined_group_hash[self.target_ip](self.joined_groups) #TODO: initiate service here to get joined groups from target quad
+            self.SendWaypoint_Struct_Service(self.joined_groups,self.average_pose.pose.position.x, self.average_pose.pose.position.y, self.average_pose.pose.position.z,yaw)
             return dockResponse("The dock is finished, switch to cooperative control")
         else:
             return dockResponse("Dock cancelled.")
@@ -245,8 +226,7 @@ class modquad:
             return trackResponse('Quadrotor starts to track the tag. Initializing the trajectory')
         else:
             orien = self.pose_hash[self.num].pose.orientation
-            euler = qua2eu([orien.x,orien.y,orien.z,orien.w],'sxyz')
-            yaw = euler[2]
+            yaw = qua2eu([orien.x,orien.y,orien.z,orien.w],'sxyz')[2]
             self.SendWaypoint_Service[self.num](self.pose_hash[self.num].pose.position.x - 0.5, 
 		self.pose_hash[self.num].pose.position.y, 
 		self.pose_hash[self.num].pose.position.z, yaw)
@@ -259,9 +239,11 @@ class modquad:
     def __pose_cb(self, msg, robot_id):
         msg.pose.position.x += self.x_orig
         msg.pose.position.y += self.y_orig
-        self.pose_hash[robot_id] = msg
         if robot_id == self.num:
             self.modquad_pose_pub.publish(msg) 
+
+    def __modquad_pose_cb(self, msg, robot_id):
+        self.pose_hash[robot_id] = msg
 
     def __vel_cb(self, msg, robot_id):
         self.vel_hash[robot_id] = msg
@@ -271,24 +253,6 @@ class modquad:
                                               msg.poses[0].position.z,1]).transpose()
         self.curr_tag_position = np.matrix([msg.poses[0].position.x,msg.poses[0].position.y,\
                                               msg.poses[0].position.z]).transpose()
-
-    def mocap_odom_cb(self,msg):
-        self.curr_pose.header = msg.header
-        self.curr_vel.header = msg.header
-        self.curr_pose.pose = msg.pose.pose
-        self.curr_vel.twist = msg.twist.twist
-
-    def mocap_odom_dock_robot_cb(self,msg):
-        self.dock_curr_pose.header = msg.header
-        self.dock_curr_vel.header = msg.header
-        self.dock_curr_pose.pose = msg.pose.pose
-        self.dock_curr_vel.twist = msg.twist.twist
-
-    def mocap_odom_wait_robot_cb(self,msg):
-        self.wait_curr_pose.header = msg.header
-        self.wait_curr_vel.header = msg.header
-        self.wait_curr_pose.pose = msg.pose.pose
-        self.wait_curr_vel.twist = msg.twist.twist
 
     def Imu_cb(self, msg):
         self.curr_Imu = msg
@@ -312,7 +276,7 @@ class modquad:
             p = PoseStamped()
             p.header.frame_id = "map"
             p.header.stamp = rospy.get_time()
-            p.pose.position.x = Vector3(0.0, 0.0, 0.0)
+            p.pose.position = Vector3(0.0, 0.0, 0.0)
             p.pose.orientation.x = 0.0
             p.pose.orientation.y = 0.0
             p.pose.orientation.z = 0.0
@@ -368,8 +332,7 @@ class modquad:
         start_point.y = self.pose_hash[self.num].pose.position.y
         start_point.z = self.pose_hash[self.num].pose.position.z
         orien = self.pose_hash[self.num].pose.orientation
-        euler = qua2eu([orien.x,orien.y,orien.z,orien.w],'sxyz')
-        start_point.yaw = euler[2] 
+        start_point.yaw = qua2eu([orien.x,orien.y,orien.z,orien.w],'sxyz')[2]
         start_point.updated = False
         return start_point
 
@@ -632,7 +595,7 @@ class modquad:
 
 	Imu_norm = np.linalg.norm(self.Imu_queue, 2)
 
-	if curr_odom[2] < 0.2 and Imu_norm > 2: #2 is arbitrary, looking for IMU jump when z distance is less than 20cm
+	if curr_odom[2] < 0.2 and Imu_norm > 1.2: #1.2 is arbitrary, looking for IMU jump when z distance is less than 20cm
 		dock_state = True
 	else:
 		dock_state = False
