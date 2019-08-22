@@ -31,7 +31,7 @@
       <real_time_update_rate>250</real_time_update_rate>
       <magnetic_field>6.0e-6 2.3e-5 -4.2e-5</magnetic_field>
     </physics>
-    <model name='camera'>
+    <!--model name='camera'>
       <static>true</static>
       <pose>2 0 5 0 1.57079632679 0</pose>
       <link name='link'>
@@ -69,6 +69,6 @@
         </plugin>
         </sensor>
       </link>
-    </model>
+    </model-->
   </world>
 </sdf>

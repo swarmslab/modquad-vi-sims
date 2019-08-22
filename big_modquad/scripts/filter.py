@@ -9,6 +9,7 @@ from modquad.msg import *
 from tf.transformations import quaternion_matrix
 from geometry_msgs.msg import PoseArray
 from sensor_msgs.msg import Imu
+from std_msgs.msg import Int8
 import numpy as np
 import numpy.linalg as LA
 
@@ -21,7 +22,7 @@ class kalmanfilter:
         self.pub_and_sub_init()
         self.parameter_init()
       
-        rate = rospy.Rate(50)  # Hz
+        rate = rospy.Rate(50)
         rate.sleep()
 
         while not rospy.is_shutdown():
@@ -33,6 +34,8 @@ class kalmanfilter:
             Prediction = self.Prediction(input)
 
             if self.image_updated:
+                self.set_up_system(self.last_Rotation_matrix,current_time)
+                input = self.get_input(self.last_Rotation_matrix, self.last_acceleration)
                 mu = self.update(Prediction[0],Prediction[1],self.whycon_position,Imu)
                 self.image_updated = False
             else:
@@ -45,13 +48,10 @@ class kalmanfilter:
             self.state_pub.publish(Vision_Odom)
             rate.sleep()
 
-            
     def Prediction(self,input):
         mu_bar = self.A * self.last_mu_bar + self.B * input
-
         Sigma_bar = self.A * self.last_Sigma * self.AT + self.Vt*self.Q1*self.VtT + self.Q2
         return [mu_bar,Sigma_bar]
-
 
     def update(self,mu_bar,Sigma_bar,whycon_position,Imu):
         '''
@@ -61,9 +61,7 @@ class kalmanfilter:
         '''
         Current_image_Rotmatrix = self.get_Rotation_matrix(Imu)
         tag_vector = np.matrix([whycon_position.poses[0].position.x,whycon_position.poses[0].position.y,whycon_position.poses[0].position.z]).transpose()
-        measure_position = self.d_tag_quad2-Current_image_Rotmatrix*(self.R_cam_quad1*tag_vector+self.d_cam_quad1)
-        #FOR LEFT TAG DETECTION, REPLACE measure_position WITH THE FOLLOWING:
-	#measure_position = self.d_tag_quad2-self.R_w_waitmod*Current_image_Rotmatrix*(self.R_cam_quad1*tag_vector+self.d_cam_quad1)
+	measure_position = self.d_tag_quad2-self.R_w_waitmod*Current_image_Rotmatrix*(self.R_cam_quad1*tag_vector+self.d_cam_quad1)
 
         Kt = Sigma_bar*self.CT*LA.inv(self.C*Sigma_bar*self.CT + self.R)
 
@@ -109,6 +107,20 @@ class kalmanfilter:
 
     def Imu_cb(self,msg):
         self.Imu = msg
+
+    def dock_side_cb(self,msg):
+        if msg.data == 1:
+            self.R_w_waitmod = np.matrix([[0, -1, 0],
+                                         [1, 0, 0],
+                                         [0, 0, 1]]) #left docking matrix
+        elif msg.data == 2:
+            self.R_w_waitmod = np.identity(3)
+        elif msg.data == 3:    
+            self.R_w_waitmod = np.matrix([[0, 1, 0],
+                                         [-1, 0, 0],
+                                         [0, 0, 1]]) #right docking matrix
+        else:
+            rospy.logerr("Improper docking side request!")
 
     def parameter_init(self,):
         self.x = np.matrix(np.zeros((9,1)))
@@ -177,9 +189,7 @@ class kalmanfilter:
 
         self.last_Sigma = np.matrix(np.zeros((9,9)))
 
-        self.R_w_waitmod = np.matrix([[0, -1, 0],
-                           [1, 0, 0],
-                           [0, 0, 1]])
+        self.R_w_waitmod = np.identity(3) #back docking matrix 
 
         self.R = np.matrix([[error_cam_x, 0, 0],
                            [0, error_cam_y, 0],
@@ -190,14 +200,11 @@ class kalmanfilter:
         self.Rot_z_180 = np.matrix([[-1.0, 0, 0],
                             [0, -1.0, 0],
                             [0, 0, 1.0]])
-	#self.d_cam_quad1 = np.matrix([0.1430,0.0,0.025]).transpose()
-	#self.d_tag_quad2 = np.matrix([-0.160,0.050,0.090]).transpose()
 	self.d_cam_quad1 = np.matrix([0.1083,-0.00426,0.04344]).transpose()
 	self.d_tag_quad2 = np.matrix([-0.149,-0.011,0.04787]).transpose()
 	#FOR LEFT TAG DETECTION, REPLACE self.d_tag_quad2 WITH THE FOLLOWING:
 	#self.d_tag_quad2 = np.matrix([0.0000,0.149,0.04787]).transpose()
-        #self.R_cam_quad1 = np.matrix([[0, 0, 1], [-1, 0, 0], [0, -1, 0]]) # Actual camera
-        self.R_cam_quad1 = np.matrix([[0, 0, 1], [-1, 0, 0], [0, -1, 0]])  # Simulation
+        self.R_cam_quad1 = np.matrix([[0, 0, 1], [-1, 0, 0], [0, -1, 0]])
 
         self.Vt = np.matrix(np.zeros((9, 3)))
         while True:
@@ -217,7 +224,7 @@ class kalmanfilter:
         self.state_pub = rospy.Publisher('/modquad' + self.ip_addr + '/filtered_Vision_Odom', VisionOdom, queue_size=10)
         rospy.Subscriber('/modquad' + self.ip_addr + '/whycon' + self.ip_addr + '/poses', PoseArray, callback=self.image_detection_cb)
         rospy.Subscriber('/modquad' + self.ip_addr + '/mavros' + self.ip_addr + '/imu/data', Imu, callback=self.Imu_cb)
-
+        rospy.Subscriber('/modquad' + self.ip_addr + '/dock_side', Int8, callback=self.dock_side_cb)
 
     def get_Rotation_matrix(self,Imu):
         curr_R = np.matrix(
@@ -226,25 +233,15 @@ class kalmanfilter:
         return curr_R
 
     def get_input(self,R,acceleration):
-        input = -self.gravity + R * acceleration
-        #FOR LEFT TAG DETECTION, REPLACE input WITH THE FOLLOWING:
-        #input = self.R_w_waitmod*(-self.gravity + R * acceleration)
+        input = self.R_w_waitmod*(-self.gravity + R * acceleration)
         return input
 
     def set_up_system(self,R,current_time):
         self.DT = current_time - self.last_time 
-        self.A[3:6, 6:] = -self.DT * R
+        self.A[3:6, 6:] = -self.DT * self.R_w_waitmod * R
         self.AT = self.A.transpose()
-        self.Vt[3:6, :] = -R
+        self.Vt[3:6, :] = -self.R_w_waitmod*R
         self.VtT = self.Vt.transpose()
-
-#FOR LEFT TAG DETECTION, REPLACE set_up_system WITH THE FOLLOWING:
-#    def set_up_system(self,R,current_time):
-#        self.DT = current_time - self.last_time 
-#        self.A[3:6, 6:] = -self.DT * self.R_w_waitmod * R
-#        self.AT = self.A.transpose()
-#        self.Vt[3:6, :] = -self.R_w_waitmod*R
-#        self.VtT = self.Vt.transpose()
 
     def Update_orientation_and_acceleration(self,Imu):
         self.last_time = Imu.header.stamp.secs + Imu.header.stamp.nsecs * 1e-9

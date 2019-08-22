@@ -1,14 +1,14 @@
 <?xml version="1.0"?>
 
 <launch>
-  <arg name="robots_number" default="3"/>
+  <arg name="robots_number" default="2"/>
   <arg name="Environment" default="gps"/>
   <arg name="name" value="modquad"/>
-  <arg name="robot_list" value="[0,1,2]"/>
+  <arg name="robot_list" value="[0,1]"/>
 
   <arg name="est" default="ekf2"/>
   <arg name="world" default="$(find modquad)/config/worlds/empty.world"/>
-  <arg name="gui" default="false"/>
+  <arg name="gui" default="true"/>
   <arg name="debug" default="false"/>
   <arg name="verbose" default="false"/>
   <arg name="paused" default="false"/>
@@ -75,8 +75,8 @@
     <arg name="modquad_name" default="$(eval arg('name') + '1')" />
     <arg name="mavros_name" default="$(eval 'mavros' + '1')" />
     <arg name="targets" default="1"/>
-    <arg name="x_orig" default="1.0"/>
-    <arg name="y_orig" default="0.0"/>
+    <arg name="x_orig" default="0.0"/>
+    <arg name="y_orig" default="1.0"/>
     <param name="ip_addr" value="$(arg ip_addr)"/>
     <param name="Environment" type="string" value="$(arg Environment)"/>
     <param name="RobotsNumber"  value="$(arg robots_number)"/>
@@ -119,7 +119,7 @@
     </include>
   </group>
 
-  <group ns="modquad2">
+  <!--group ns="modquad2">
     <arg name="ip_addr" default="2"/>
     <arg name="modquad_name" default="$(eval arg('name') + '2')" />
     <arg name="mavros_name" default="$(eval 'mavros' + '2')" />
@@ -168,7 +168,7 @@
     </include>
   </group>
 
-  <!--group ns="modquad3">
+  <group ns="modquad3">
     <arg name="ip_addr" default="3"/>
     <arg name="modquad_name" default="$(eval arg('name') + '3')" />
     <arg name="mavros_name" default="$(eval 'mavros' + '3')" />
@@ -188,7 +188,7 @@
     <node pkg="modquad" name="modquadfilter3" type="filter.py" output="screen">
     </node>
 
-    <node name="whycon1" type="whycon" pkg="whycon" output="screen">
+    <node name="whycon3" type="whycon" pkg="whycon" output="screen">
       <remap from="/camera/image_rect_color" to="$(eval '/' + arg('modquad_name') + '/camera_image/image_raw')"/>
       <remap from="/camera/camera_info" to="$(eval '/' + arg('modquad_name') + '/camera_image/camera_info')"/>
       <param name="targets" value="$(arg targets)"/>

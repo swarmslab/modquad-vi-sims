@@ -8,7 +8,7 @@ from modquad.srv import *
 from modquad.msg import *
 from gazebo_magnet.srv import *
 from geometry_msgs.msg import Vector3, PoseStamped, TwistStamped, PoseArray
-from std_msgs.msg import Bool
+from std_msgs.msg import Bool, Int8
 from sensor_msgs.msg import Imu
 from mavros_msgs.msg import AttitudeTarget, Thrust, CooperativeControl
 import numpy as np
@@ -33,9 +33,10 @@ class modquad:
     intz = 0.0
     tag_pos_in_cam = np.matrix([0,0,0,1]).transpose()
     A_init_flag = False
-    isReadyToFly = False
     total_robots_num = 1
     docked = False
+    dock_side = 'back'
+    tag_angle = 0.0
 
     def __init__(self,Environment,num,total_robots_num):
         self.pos_control_param_init()
@@ -54,6 +55,7 @@ class modquad:
         self.pose_hash = {}
         self.vel_hash = {}
         self.joined_groups = [self.num]
+        self.dock_side_enum = {"left": 1, "back": 2, "right": 3}
         '''
         ---------------------------------------Service initialization----------------------------------------------
         '''
@@ -70,6 +72,7 @@ class modquad:
         self.mavros_attitude_pub = rospy.Publisher('/modquad' + num + '/mavros'+num+'/setpoint_raw/attitude', AttitudeTarget, queue_size=10)
         self.mavros_thrust_pub = rospy.Publisher('/modquad' + num + '/mavros'+num+'/setpoint_attitude/thrust', Thrust, queue_size=10)
 	self.docked_pub = rospy.Publisher('/modquad' + num + '/modquad_docked', Bool, queue_size=10)
+	self.dock_side_pub = rospy.Publisher('/modquad' + num + '/dock_side', Int8, queue_size=10)
 	self.modquad_switch_control_pub = rospy.Publisher('/modquad' + num + '/switch_control', Bool, queue_size=10)
 	self.modquad_pose_pub = rospy.Publisher('/modquad' + num + '/corrected_local_pose', PoseStamped, queue_size=10) 
         #i have no idea why, but px4 says every vehicle's local position is
@@ -178,16 +181,16 @@ class modquad:
           return dockResponse('Target robot does not exist!')
         self.dock_flag = req.dock_flag
         self.dock_method = req.method
-        self.waitmod_yaw = req.waitmod_yaw
         if req.dock_side == 'left':
-           self.tag_angle = 3*np.pi/2
+           self.tag_angle = np.pi/2
         elif req.dock_side == 'back':
-           self.tag_angle = 0
+           self.tag_angle = 0.0
         elif req.dock_side == 'right':
-           self.tag_angle =  np.pi/2 
+           self.tag_angle = -np.pi/2 
         else: 
            return dockResponse("The angle is not legit")
 
+        self.dock_side = req.dock_side
         if req.dock_flag & (req.method == 'trajectory'):
             return dockResponse("The current docking method is " + req.method)
         elif ((not req.dock_flag) & (req.method == 'dock_finish')): 
@@ -212,16 +215,17 @@ class modquad:
         if self.target_ip not in self.robot_list:
           return trackResponse('Target robot does not exist!')
         self.track_flag = req.track_flag
-        self.waitmod_yaw = req.waitmod_yaw
         if req.dock_side == 'left':
-           self.tag_angle = 3*np.pi/2
+           self.tag_angle = np.pi/2
         elif req.dock_side == 'back':
-           self.tag_angle = 0
+           self.tag_angle = 0.0
         elif req.dock_side == 'right':
-           self.tag_angle =  np.pi/2 
+           self.tag_angle = -np.pi/2 
         else: 
            return trackResponse("The angle is not legit")
 
+        self.dock_side = req.dock_side
+	self.dock_side_pub.publish(self.dock_side_enum[self.dock_side])
         if req.track_flag:
             return trackResponse('Quadrotor starts to track the tag. Initializing the trajectory')
         else:
@@ -268,6 +272,12 @@ class modquad:
     '''
     def get_target_ip(self):
         return self.target_ip
+
+    def get_dock_side(self):
+        return self.dock_side
+
+    def get_tag_angle(self):
+        return self.tag_angle
 
     def get_current_pose(self, robot_id):
         try:
@@ -501,12 +511,14 @@ class modquad:
             des_acc.x = des_trajectory_point.acceleration.x + self.Kp_track.x * ex + self.Kd_track.x * evx + self.Ki_track.x * self.intx
             des_acc.y = des_trajectory_point.acceleration.y + self.Kp_track.y * ey + self.Kd_track.y * evy + self.Ki_track.y * self.inty
             des_acc.z = des_trajectory_point.acceleration.z + self.Kp_track.z * ez + self.Kd_track.z * evz + self.Ki_track.z * self.intz
-            Rot_waitmod_w = np.matrix([[np.cos(self.waitmod_yaw),-np.sin(self.waitmod_yaw),0],[np.sin(self.waitmod_yaw),np.cos(self.waitmod_yaw),0],[0,0,1]]).transpose()
+            R_waitmod_w = np.matrix([[np.cos(self.tag_angle),-np.sin(self.tag_angle),0],[np.sin(self.tag_angle),np.cos(self.tag_angle),0],[0,0,1]]).transpose()
             curr_quaternion = [curr_odom.orientation.x, curr_odom.orientation.y,
                                curr_odom.orientation.z, curr_odom.orientation.w]
             H_curr = tf.transformations.quaternion_matrix(curr_quaternion)
             Rot_curr = np.matrix(H_curr[:3, :3])
-            des_acc_relative = Rot_waitmod_w*np.matrix([[des_acc.x], [des_acc.y], [des_acc.z]])
+            des_acc_relative = R_waitmod_w*np.matrix([[des_acc.x], 
+							[des_acc.y], 
+							[des_acc.z]])
             Force_des = np.matrix([[0], [0], [self.m * self.g]])+self.m * des_acc_relative
             Force_des_body = Rot_curr * Force_des
             thrust.thrust = Force_des_body[2]
