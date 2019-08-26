@@ -1,17 +1,24 @@
 <?xml version="1.0"?>
 
 <launch>
-  <arg name="robots_number" default="2"/>
+  <arg name="robots_number" default="3"/>
   <arg name="Environment" default="gps"/>
   <arg name="name" value="modquad"/>
-  <arg name="robot_list" value="[0,1]"/>
+  <arg name="robot_list" value="[0,1,2]"/>
 
   <arg name="est" default="ekf2"/>
   <arg name="world" default="$(find modquad)/config/worlds/empty.world"/>
-  <arg name="gui" default="true"/>
+  <arg name="gui" default="false"/>
   <arg name="debug" default="false"/>
   <arg name="verbose" default="false"/>
   <arg name="paused" default="false"/>
+
+  <rosparam param="target_assembly">
+    [0,-1,2,-1,-1,  1,2,-1,-1,-1,  2,-1,-1,1,0]
+  </rosparam>
+  <!--1st column = ID, 2nd column = up, 3rd = right, 4th = down, 5th = left -->
+
+  <node pkg="modquad" name="modquad_assembler" type="vision_assembler.py" output="screen" launch-prefix="bash -c 'sleep 9.0; $0 $@' "/>
 
   <include file="$(find gazebo_ros)/launch/empty_world.launch">
       <arg name="gui" value="$(arg gui)"/>
@@ -76,7 +83,7 @@
     <arg name="mavros_name" default="$(eval 'mavros' + '1')" />
     <arg name="targets" default="1"/>
     <arg name="x_orig" default="0.0"/>
-    <arg name="y_orig" default="1.0"/>
+    <arg name="y_orig" default="2.0"/>
     <param name="ip_addr" value="$(arg ip_addr)"/>
     <param name="Environment" type="string" value="$(arg Environment)"/>
     <param name="RobotsNumber"  value="$(arg robots_number)"/>
@@ -119,13 +126,13 @@
     </include>
   </group>
 
-  <!--group ns="modquad2">
+  <group ns="modquad2">
     <arg name="ip_addr" default="2"/>
     <arg name="modquad_name" default="$(eval arg('name') + '2')" />
     <arg name="mavros_name" default="$(eval 'mavros' + '2')" />
     <arg name="targets" default="1"/>
-    <arg name="x_orig" default="2.0"/>
-    <arg name="y_orig" default="0.0"/>
+    <arg name="x_orig" default="0.0"/>
+    <arg name="y_orig" default="4.0"/>
     <param name="ip_addr" value="$(arg ip_addr)"/>
     <param name="Environment" type="string" value="$(arg Environment)"/>
     <param name="RobotsNumber"  value="$(arg robots_number)"/>
@@ -168,13 +175,13 @@
     </include>
   </group>
 
-  <group ns="modquad3">
+  <!--group ns="modquad3">
     <arg name="ip_addr" default="3"/>
     <arg name="modquad_name" default="$(eval arg('name') + '3')" />
     <arg name="mavros_name" default="$(eval 'mavros' + '3')" />
     <arg name="targets" default="1"/>
-    <arg name="x_orig" default="3.0"/>
-    <arg name="y_orig" default="0.0"/>
+    <arg name="x_orig" default="0.0"/>
+    <arg name="y_orig" default="6.0"/>
     <param name="ip_addr" value="$(arg ip_addr)"/>
     <param name="Environment" type="string" value="$(arg Environment)"/>
     <param name="RobotsNumber"  value="$(arg robots_number)"/>

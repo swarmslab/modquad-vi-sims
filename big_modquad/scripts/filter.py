@@ -23,7 +23,6 @@ class kalmanfilter:
         self.parameter_init()
       
         rate = rospy.Rate(50)
-        rate.sleep()
 
         while not rospy.is_shutdown():
             Vision_Odom = VisionOdom()

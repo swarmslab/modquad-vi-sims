@@ -9,6 +9,6 @@ rosrun mavros mavsys -n modquad3/mavros3 mode -c OFFBOARD
 
 rosrun mavros mavsafety -n modquad0/mavros0 arm
 rosrun mavros mavsafety -n modquad1/mavros1 arm
-#rosrun mavros mavsafety -n modquad2/mavros2 arm
-#rosrun mavros mavsafety -n modquad3/mavros3 arm
+rosrun mavros mavsafety -n modquad2/mavros2 arm
+rosrun mavros mavsafety -n modquad3/mavros3 arm
 echo "Now armed"

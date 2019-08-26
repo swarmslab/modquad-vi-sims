@@ -63,8 +63,6 @@ find_package(catkin REQUIRED COMPONENTS
    FILES
    sendwaypoint.srv
    sendwaypoint_struct.srv
-   takeoff.srv
-   flag.srv
    track.srv
    dock.srv
    set_group.srv

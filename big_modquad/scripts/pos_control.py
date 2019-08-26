@@ -44,9 +44,6 @@ class position_control:
         rospy.wait_for_service('/modquad'+num+'/dock')
         Dock_Service = rospy.ServiceProxy('/modquad'+num+'/dock', dock)
         	
-        rospy.wait_for_service('/modquad'+num+'/join_groups')
-        Join_Group_Service = rospy.ServiceProxy('/modquad'+num+'/join_groups', set_group)
-
         time_init = 0.0
         yaw_des = 0.0
         track_dock_init = False
@@ -84,7 +81,7 @@ class position_control:
                             rospy.loginfo("Tag detection OK. Quadrotor beginning to dock.")
                             if track_dock_init == True:
                                 dock_waypoint = Waypoint(-0.2, 
-							0.06, 
+							0.0, 
 							-0.15, 
 				                        -self.modquad.get_tag_angle(),
 							False)
@@ -160,7 +157,7 @@ class position_control:
                 rospy.loginfo("The tag is detected and the quad starts to track")
                 if track_dock_init == False:
                     track_waypoint = Waypoint(-0.8, 
-						0.06, 
+						0.0, 
 						-0.15, 
 				                -self.modquad.get_tag_angle(),
 						False)
