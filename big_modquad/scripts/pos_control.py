@@ -67,13 +67,8 @@ class position_control:
                     #self.modquad.pub_docked_state_to_px4(docked_state)
                     Track_Service(False, 
 				self.modquad.get_dock_side(),
-				self.modquad.get_tag_angle(),
 				self.modquad.get_target_ip())
-                    Dock_Service(False, 
-				self.modquad.get_dock_side(),
-				self.modquad.get_tag_angle(),
-				'dock_finish', 
-				self.modquad.get_target_ip())
+                    Dock_Service(False, "dock_finish")
 
                     rospy.loginfo("---- The quadrotors are docked! ----")
                 else:
@@ -82,7 +77,7 @@ class position_control:
                             if track_dock_init == True:
                                 dock_waypoint = Waypoint(-0.2, 
 							0.0, 
-							-0.15, 
+							0.0, 
 				                        -self.modquad.get_tag_angle(),
 							False)
                                 #0.2 = length of one side of quad + camera-side distance in m
@@ -93,11 +88,7 @@ class position_control:
                                 tf = 6 #timeout of 6 seconds?
                                 self.modquad.two_pts_trajectory_init(start_point, dock_waypoint,t0,tf) #solve Ax = b for A and calculate x,y,z, and yaw coefficients 
                                 time_init = rospy.get_time()
-                                Dock_Service(True,
-				                self.modquad.get_dock_side(),
-				                self.modquad.get_tag_angle(),
-						dock_method, 
-						self.modquad.get_target_ip())
+                                Dock_Service(True, dock_method)
                                 track_dock_init = False
 
 	 		    odom = self.modquad.get_current_vision_odom() #get current tag position
@@ -117,39 +108,24 @@ class position_control:
 
 			    #track_and_trajectory_dock_control publishes attitude and 
 			    #thrust commands to mavros after control calculations
-                            Dock_Service(True,
-				        self.modquad.get_dock_side(),
-				        self.modquad.get_tag_angle(),
-					dock_method, 
-					self.modquad.get_target_ip())
+                            Dock_Service(True, dock_method)
                         else:
                             rospy.logerr("Dock method invalid. Dock service Cancelled.")
-                            Dock_Service(False, 
-				        self.modquad.get_dock_side(),
-				        self.modquad.get_tag_angle(),
-					"Invalid", 
-					self.modquad.get_target_ip())
+                            Dock_Service(False, "Invalid")
                             track_dock_init = False
 
             elif track_flag&dock_flag&(not tag_detected):
                 rospy.logerr("Tag lost while attempting to dock!")
                 Track_Service(False, 
 				self.modquad.get_dock_side(),
-				self.modquad.get_tag_angle(),
 				self.modquad.get_target_ip())
-                Dock_Service(False, 
-				self.modquad.get_dock_side(),
-				self.modquad.get_tag_angle(),
-				'Invalid', 
-				self.modquad.get_target_ip())
+                Dock_Service(False, "Invalid")
                 track_dock_init = False
 
             elif track_flag & (not dock_flag) & (not tag_detected):
-                #TODO: disable error log when setting orientation for filter
                 rospy.logerr("Tag lost while attempting to track!")
                 Track_Service(False, 
 				self.modquad.get_dock_side(),
-				self.modquad.get_tag_angle(),
 				self.modquad.get_target_ip())
                 self.modquad.pub_docked_state_to_px4(False)
                 track_dock_init = False
@@ -159,7 +135,7 @@ class position_control:
                 if track_dock_init == False:
                     track_waypoint = Waypoint(-0.8, 
 						0.0, 
-						-0.15, 
+						0.0, 
 				                -self.modquad.get_tag_angle(),
 						False)
 		    #this is RELATIVE to the hovering quad, we also account for camera height
@@ -172,7 +148,6 @@ class position_control:
                     time_init = rospy.get_time()
                     Track_Service(True,
 				self.modquad.get_dock_side(),
-				self.modquad.get_tag_angle(),
 				self.modquad.get_target_ip())
                     track_dock_init = True
 
@@ -190,7 +165,6 @@ class position_control:
 
                 Track_Service(True,
 				self.modquad.get_dock_side(),
-				self.modquad.get_tag_angle(),
 				self.modquad.get_target_ip())
 
             else: 

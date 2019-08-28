@@ -118,8 +118,12 @@ class kalmanfilter:
             self.R_w_waitmod = np.matrix([[0, 1, 0],
                                          [-1, 0, 0],
                                          [0, 0, 1]]) #right docking matrix
+        elif msg.data == "forward":
+            self.R_w_waitmod = np.matrix([[-1, 0, 0],
+                                         [0, -1, 0],
+                                         [0, 0, 1]]) #forward docking matrix
         else:
-            rospy.logerr("Improper docking side request!")
+            rospy.logerr("Improper docking side request: %s", msg.data)
 
     def parameter_init(self,):
         self.x = np.matrix(np.zeros((9,1)))

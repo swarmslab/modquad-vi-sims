@@ -71,7 +71,6 @@ class modquad:
         self.mavros_attitude_pub = rospy.Publisher('/modquad' + num + '/mavros'+num+'/setpoint_raw/attitude', AttitudeTarget, queue_size=10)
         self.mavros_thrust_pub = rospy.Publisher('/modquad' + num + '/mavros'+num+'/setpoint_attitude/thrust', Thrust, queue_size=10)
 	self.docked_pub = rospy.Publisher('/modquad' + num + '/modquad_docked', Bool, queue_size=10)
-	self.dock_side_pub = rospy.Publisher('/modquad' + num + '/dock_side', String, queue_size=10)
 	self.modquad_switch_control_pub = rospy.Publisher('/modquad' + num + '/switch_control', Bool, queue_size=10)
 	self.modquad_pose_pub = rospy.Publisher('/modquad' + num + '/corrected_local_pose', PoseStamped, queue_size=10) 
         #i have no idea why, but px4 says every vehicle's local position is
@@ -175,21 +174,9 @@ class modquad:
     def handle_dock(self, req):
         if self.docked:
           return dockResponse('This robot is currently docked and cannot take orders.')
-        self.target_ip = req.target_ip
-        if self.target_ip not in self.robot_list:
-          return dockResponse('Target robot does not exist!')
         self.dock_flag = req.dock_flag
         self.dock_method = req.method
-        if req.dock_side == 'left':
-           self.tag_angle = np.pi/2
-        elif req.dock_side == 'back':
-           self.tag_angle = 0.0
-        elif req.dock_side == 'right':
-           self.tag_angle = -np.pi/2 
-        else: 
-           return dockResponse("The angle is not legit")
 
-        self.dock_side = req.dock_side
         if req.dock_flag & (req.method == 'trajectory'):
             return dockResponse("The current docking method is " + req.method)
         elif ((not req.dock_flag) & (req.method == 'dock_finish')): 
@@ -201,7 +188,7 @@ class modquad:
             orien = self.pose_hash[self.num].pose.orientation
             yaw = qua2eu([orien.x,orien.y,orien.z,orien.w],'sxyz')[2]
             rospy.logwarn("Publish switch control")
-            self.joined_group_hash[self.target_ip](self.joined_groups) #TODO: initiate service here to get joined groups from target quad
+            self.joined_group_hash[self.target_ip](self.joined_groups) 
             self.SendWaypoint_Struct_Service(self.joined_groups,self.average_pose.pose.position.x, self.average_pose.pose.position.y, self.average_pose.pose.position.z,yaw)
             return dockResponse("The dock is finished, switch to cooperative control")
         else:
@@ -220,11 +207,12 @@ class modquad:
            self.tag_angle = 0.0
         elif req.dock_side == 'right':
            self.tag_angle = -np.pi/2 
+        elif req.dock_side == 'forward':
+           self.tag_angle = np.pi
         else: 
            return trackResponse("The angle is not legit")
 
         self.dock_side = req.dock_side
-	self.dock_side_pub.publish(self.dock_side)
         if req.track_flag:
             return trackResponse('Quadrotor starts to track the tag. Initializing the trajectory')
         else:
