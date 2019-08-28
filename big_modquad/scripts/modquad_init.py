@@ -8,7 +8,7 @@ from modquad.srv import *
 from modquad.msg import *
 from gazebo_magnet.srv import *
 from geometry_msgs.msg import Vector3, PoseStamped, TwistStamped, PoseArray
-from std_msgs.msg import Bool, Int8
+from std_msgs.msg import Bool, String
 from sensor_msgs.msg import Imu
 from mavros_msgs.msg import AttitudeTarget, Thrust, CooperativeControl
 import numpy as np
@@ -55,7 +55,6 @@ class modquad:
         self.pose_hash = {}
         self.vel_hash = {}
         self.joined_groups = [self.num]
-        self.dock_side_enum = {"left": 1, "back": 2, "right": 3}
         '''
         ---------------------------------------Service initialization----------------------------------------------
         '''
@@ -72,7 +71,7 @@ class modquad:
         self.mavros_attitude_pub = rospy.Publisher('/modquad' + num + '/mavros'+num+'/setpoint_raw/attitude', AttitudeTarget, queue_size=10)
         self.mavros_thrust_pub = rospy.Publisher('/modquad' + num + '/mavros'+num+'/setpoint_attitude/thrust', Thrust, queue_size=10)
 	self.docked_pub = rospy.Publisher('/modquad' + num + '/modquad_docked', Bool, queue_size=10)
-	self.dock_side_pub = rospy.Publisher('/modquad' + num + '/dock_side', Int8, queue_size=10)
+	self.dock_side_pub = rospy.Publisher('/modquad' + num + '/dock_side', String, queue_size=10)
 	self.modquad_switch_control_pub = rospy.Publisher('/modquad' + num + '/switch_control', Bool, queue_size=10)
 	self.modquad_pose_pub = rospy.Publisher('/modquad' + num + '/corrected_local_pose', PoseStamped, queue_size=10) 
         #i have no idea why, but px4 says every vehicle's local position is
@@ -153,7 +152,7 @@ class modquad:
         return sendwaypoint_structResponse(True)
     
     def handle_send_waypoint(self,req): #sends waypoint to one quad
-        rospy.loginfo("Sent waypoint is [%s, %s, %s, %s]", req.x,req.y,req.z,req.yaw)
+        rospy.loginfo("Sent waypoint is [%s, %s, %s, %s] to robot %d", req.x,req.y,req.z,req.yaw,self.num)
         waypoint = Waypoint() 
         waypoint.x = req.x
         waypoint.y = req.y
@@ -225,7 +224,7 @@ class modquad:
            return trackResponse("The angle is not legit")
 
         self.dock_side = req.dock_side
-	self.dock_side_pub.publish(self.dock_side_enum[self.dock_side])
+	self.dock_side_pub.publish(self.dock_side)
         if req.track_flag:
             return trackResponse('Quadrotor starts to track the tag. Initializing the trajectory')
         else:

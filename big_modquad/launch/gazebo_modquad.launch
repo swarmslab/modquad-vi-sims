@@ -8,14 +8,31 @@
 
   <arg name="est" default="ekf2"/>
   <arg name="world" default="$(find modquad)/config/worlds/empty.world"/>
-  <arg name="gui" default="false"/>
+  <arg name="gui" default="true"/>
   <arg name="debug" default="false"/>
   <arg name="verbose" default="false"/>
   <arg name="paused" default="false"/>
 
   <rosparam param="target_assembly">
-    [0,-1,2,-1,-1,  1,2,-1,-1,-1,  2,-1,-1,1,0]
+    [0,-1,2,-1,-1,  1,-1,-1,2,-1,  2,1,-1,-1,0]
   </rosparam>
+  <!-- other test cases:
+    [0,-1,2,-1,-1,  1,-1,-1,2,-1,  2,1,-1,-1,0]
+     1
+    02
+    [0,-1,1,-1,-1,  1,-1,2,-1,0,  2,-1,-1,-1,1]
+    012
+    [0,-1,-1,-1,2,  1,-1,-1,2,-1,  2,1,0,-1,-1]
+    1
+    20
+    [0,1,-1,-1,-1,  1,2,-1,0,-1,  2,-1,-1,1,-1]
+    2
+    1
+    0
+    [0,-1,2,-1,-1,  1,2,-1,-1,-1,  2,-1,-1,1,0]
+    02
+     1
+  -->
   <!--1st column = ID, 2nd column = up, 3rd = right, 4th = down, 5th = left -->
 
   <node pkg="modquad" name="modquad_assembler" type="vision_assembler.py" output="screen" launch-prefix="bash -c 'sleep 9.0; $0 $@' "/>

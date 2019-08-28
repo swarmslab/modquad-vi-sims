@@ -9,7 +9,7 @@ from modquad.msg import *
 from tf.transformations import quaternion_matrix
 from geometry_msgs.msg import PoseArray
 from sensor_msgs.msg import Imu
-from std_msgs.msg import Int8
+from std_msgs.msg import String
 import numpy as np
 import numpy.linalg as LA
 
@@ -108,13 +108,13 @@ class kalmanfilter:
         self.Imu = msg
 
     def dock_side_cb(self,msg):
-        if msg.data == 1:
+        if msg.data == "left":
             self.R_w_waitmod = np.matrix([[0, -1, 0],
                                          [1, 0, 0],
                                          [0, 0, 1]]) #left docking matrix
-        elif msg.data == 2:
+        elif msg.data == "back":
             self.R_w_waitmod = np.identity(3)
-        elif msg.data == 3:    
+        elif msg.data == "right":
             self.R_w_waitmod = np.matrix([[0, 1, 0],
                                          [-1, 0, 0],
                                          [0, 0, 1]]) #right docking matrix
@@ -223,7 +223,7 @@ class kalmanfilter:
         self.state_pub = rospy.Publisher('/modquad' + self.ip_addr + '/filtered_Vision_Odom', VisionOdom, queue_size=10)
         rospy.Subscriber('/modquad' + self.ip_addr + '/whycon' + self.ip_addr + '/poses', PoseArray, callback=self.image_detection_cb)
         rospy.Subscriber('/modquad' + self.ip_addr + '/mavros' + self.ip_addr + '/imu/data', Imu, callback=self.Imu_cb)
-        rospy.Subscriber('/modquad' + self.ip_addr + '/dock_side', Int8, callback=self.dock_side_cb)
+        rospy.Subscriber('/modquad' + self.ip_addr + '/dock_side', String, callback=self.dock_side_cb)
 
     def get_Rotation_matrix(self,Imu):
         curr_R = np.matrix(

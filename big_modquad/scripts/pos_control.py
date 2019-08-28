@@ -132,7 +132,7 @@ class position_control:
                             track_dock_init = False
 
             elif track_flag&dock_flag&(not tag_detected):
-                rospy.logerr("Tag lost while attempting to dock!.")
+                rospy.logerr("Tag lost while attempting to dock!")
                 Track_Service(False, 
 				self.modquad.get_dock_side(),
 				self.modquad.get_tag_angle(),
@@ -145,7 +145,8 @@ class position_control:
                 track_dock_init = False
 
             elif track_flag & (not dock_flag) & (not tag_detected):
-                rospy.logerr("Tag lost while attempting to track!.")
+                #TODO: disable error log when setting orientation for filter
+                rospy.logerr("Tag lost while attempting to track!")
                 Track_Service(False, 
 				self.modquad.get_dock_side(),
 				self.modquad.get_tag_angle(),
