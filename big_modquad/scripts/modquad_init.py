@@ -8,7 +8,7 @@ from modquad.srv import *
 from modquad.msg import *
 from gazebo_magnet.srv import *
 from geometry_msgs.msg import Vector3, PoseStamped, TwistStamped, PoseArray
-from std_msgs.msg import Bool, String
+from std_msgs.msg import Bool, Int8
 from sensor_msgs.msg import Imu
 from mavros_msgs.msg import AttitudeTarget, Thrust, CooperativeControl
 import numpy as np
@@ -55,6 +55,7 @@ class modquad:
         self.pose_hash = {}
         self.vel_hash = {}
         self.joined_groups = [self.num]
+        self.dock_side_enum = {"left": 1, "back": 2, "right": 3, "forward": 4}
         '''
         ---------------------------------------Service initialization----------------------------------------------
         '''
@@ -71,6 +72,7 @@ class modquad:
         self.mavros_attitude_pub = rospy.Publisher('/modquad' + num + '/mavros'+num+'/setpoint_raw/attitude', AttitudeTarget, queue_size=10)
         self.mavros_thrust_pub = rospy.Publisher('/modquad' + num + '/mavros'+num+'/setpoint_attitude/thrust', Thrust, queue_size=10)
 	self.docked_pub = rospy.Publisher('/modquad' + num + '/modquad_docked', Bool, queue_size=10)
+	self.dock_side_pub = rospy.Publisher('/modquad' + num + '/dock_side', Int8, queue_size=10)
 	self.modquad_switch_control_pub = rospy.Publisher('/modquad' + num + '/switch_control', Bool, queue_size=10)
 	self.modquad_pose_pub = rospy.Publisher('/modquad' + num + '/corrected_local_pose', PoseStamped, queue_size=10) 
         #i have no idea why, but px4 says every vehicle's local position is
@@ -151,12 +153,13 @@ class modquad:
         return sendwaypoint_structResponse(True)
     
     def handle_send_waypoint(self,req): #sends waypoint to one quad
-        rospy.loginfo("Sent waypoint is [%s, %s, %s, %s] to robot %d", req.x,req.y,req.z,req.yaw,self.num)
+        rospy.loginfo("Sent waypoint is [%s, %s, %s, %s]", req.x,req.y,req.z,req.yaw)
         waypoint = Waypoint() 
         waypoint.x = req.x
         waypoint.y = req.y
         waypoint.z = req.z
         waypoint.yaw = req.yaw
+        self.waypoint_req = waypoint
         for ID in self.joined_groups:
             self.waypoint_pub[ID].publish(waypoint)
         return sendwaypointResponse(True)
@@ -174,6 +177,8 @@ class modquad:
     def handle_dock(self, req):
         if self.docked:
           return dockResponse('This robot is currently docked and cannot take orders.')
+        if self.target_ip not in self.robot_list:
+          return dockResponse('Target robot does not exist!')
         self.dock_flag = req.dock_flag
         self.dock_method = req.method
 
@@ -188,7 +193,7 @@ class modquad:
             orien = self.pose_hash[self.num].pose.orientation
             yaw = qua2eu([orien.x,orien.y,orien.z,orien.w],'sxyz')[2]
             rospy.logwarn("Publish switch control")
-            self.joined_group_hash[self.target_ip](self.joined_groups) 
+            self.joined_group_hash[self.target_ip](self.joined_groups) #TODO: initiate service here to get joined groups from target quad
             self.SendWaypoint_Struct_Service(self.joined_groups,self.average_pose.pose.position.x, self.average_pose.pose.position.y, self.average_pose.pose.position.z,yaw)
             return dockResponse("The dock is finished, switch to cooperative control")
         else:
@@ -213,14 +218,16 @@ class modquad:
            return trackResponse("The angle is not legit")
 
         self.dock_side = req.dock_side
+	self.dock_side_pub.publish(self.dock_side_enum[self.dock_side])
         if req.track_flag:
             return trackResponse('Quadrotor starts to track the tag. Initializing the trajectory')
         else:
             orien = self.pose_hash[self.num].pose.orientation
             yaw = qua2eu([orien.x,orien.y,orien.z,orien.w],'sxyz')[2]
-            self.SendWaypoint_Service[self.num](self.pose_hash[self.num].pose.position.x - 0.5, 
-		self.pose_hash[self.num].pose.position.y, 
-		self.pose_hash[self.num].pose.position.z, yaw)
+            self.SendWaypoint_Service[self.num](self.waypoint_req.x,
+                                                self.waypoint_req.y,
+                                                self.waypoint_req.z,
+                                                self.waypoint_req.yaw)
             return trackResponse('Disabling track and rejecting tracking trajectory initialization')
 
     '''

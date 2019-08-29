@@ -44,6 +44,9 @@ class position_control:
         rospy.wait_for_service('/modquad'+num+'/dock')
         Dock_Service = rospy.ServiceProxy('/modquad'+num+'/dock', dock)
         	
+        rospy.wait_for_service('/modquad'+num+'/join_groups')
+        Join_Group_Service = rospy.ServiceProxy('/modquad'+num+'/join_groups', set_group)
+
         time_init = 0.0
         yaw_des = 0.0
         track_dock_init = False
@@ -76,8 +79,8 @@ class position_control:
                             rospy.loginfo("Tag detection OK. Quadrotor beginning to dock.")
                             if track_dock_init == True:
                                 dock_waypoint = Waypoint(-0.2, 
-							0.0, 
-							0.0, 
+							0.06, 
+							-0.15,
 				                        -self.modquad.get_tag_angle(),
 							False)
                                 #0.2 = length of one side of quad + camera-side distance in m
@@ -88,7 +91,7 @@ class position_control:
                                 tf = 6 #timeout of 6 seconds?
                                 self.modquad.two_pts_trajectory_init(start_point, dock_waypoint,t0,tf) #solve Ax = b for A and calculate x,y,z, and yaw coefficients 
                                 time_init = rospy.get_time()
-                                Dock_Service(True, dock_method)
+                                Dock_Service(True, dock_method) 
                                 track_dock_init = False
 
 	 		    odom = self.modquad.get_current_vision_odom() #get current tag position
@@ -111,19 +114,19 @@ class position_control:
                             Dock_Service(True, dock_method)
                         else:
                             rospy.logerr("Dock method invalid. Dock service Cancelled.")
-                            Dock_Service(False, "Invalid")
+                            Dock_Service(False, "Invalid") 
                             track_dock_init = False
 
             elif track_flag&dock_flag&(not tag_detected):
-                rospy.logerr("Tag lost while attempting to dock!")
+                rospy.logerr("Tag lost while attempting to dock!.")
                 Track_Service(False, 
 				self.modquad.get_dock_side(),
 				self.modquad.get_target_ip())
-                Dock_Service(False, "Invalid")
+                Dock_Service(False, "Invalid") 
                 track_dock_init = False
 
             elif track_flag & (not dock_flag) & (not tag_detected):
-                rospy.logerr("Tag lost while attempting to track!")
+                rospy.logerr("Tag lost while attempting to track!.")
                 Track_Service(False, 
 				self.modquad.get_dock_side(),
 				self.modquad.get_target_ip())
@@ -134,8 +137,8 @@ class position_control:
                 rospy.loginfo("The tag is detected and the quad starts to track")
                 if track_dock_init == False:
                     track_waypoint = Waypoint(-0.8, 
-						0.0, 
-						0.0, 
+						0.06, 
+						-0.15, 
 				                -self.modquad.get_tag_angle(),
 						False)
 		    #this is RELATIVE to the hovering quad, we also account for camera height

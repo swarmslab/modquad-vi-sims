@@ -9,7 +9,7 @@ from modquad.msg import *
 from tf.transformations import quaternion_matrix
 from geometry_msgs.msg import PoseArray
 from sensor_msgs.msg import Imu
-from std_msgs.msg import String
+from std_msgs.msg import Int8
 import numpy as np
 import numpy.linalg as LA
 
@@ -23,6 +23,7 @@ class kalmanfilter:
         self.parameter_init()
       
         rate = rospy.Rate(50)
+        rate.sleep()
 
         while not rospy.is_shutdown():
             Vision_Odom = VisionOdom()
@@ -108,22 +109,22 @@ class kalmanfilter:
         self.Imu = msg
 
     def dock_side_cb(self,msg):
-        if msg.data == "left":
+        if msg.data == 1:
             self.R_w_waitmod = np.matrix([[0, -1, 0],
                                          [1, 0, 0],
                                          [0, 0, 1]]) #left docking matrix
-        elif msg.data == "back":
+        elif msg.data == 2:
             self.R_w_waitmod = np.identity(3)
-        elif msg.data == "right":
+        elif msg.data == 3: 
             self.R_w_waitmod = np.matrix([[0, 1, 0],
                                          [-1, 0, 0],
                                          [0, 0, 1]]) #right docking matrix
-        elif msg.data == "forward":
+        elif msg.data == 4: 
             self.R_w_waitmod = np.matrix([[-1, 0, 0],
                                          [0, -1, 0],
                                          [0, 0, 1]]) #forward docking matrix
         else:
-            rospy.logerr("Improper docking side request: %s", msg.data)
+            rospy.logerr("Improper docking side request!")
 
     def parameter_init(self,):
         self.x = np.matrix(np.zeros((9,1)))
@@ -227,7 +228,7 @@ class kalmanfilter:
         self.state_pub = rospy.Publisher('/modquad' + self.ip_addr + '/filtered_Vision_Odom', VisionOdom, queue_size=10)
         rospy.Subscriber('/modquad' + self.ip_addr + '/whycon' + self.ip_addr + '/poses', PoseArray, callback=self.image_detection_cb)
         rospy.Subscriber('/modquad' + self.ip_addr + '/mavros' + self.ip_addr + '/imu/data', Imu, callback=self.Imu_cb)
-        rospy.Subscriber('/modquad' + self.ip_addr + '/dock_side', String, callback=self.dock_side_cb)
+        rospy.Subscriber('/modquad' + self.ip_addr + '/dock_side', Int8, callback=self.dock_side_cb)
 
     def get_Rotation_matrix(self,Imu):
         curr_R = np.matrix(

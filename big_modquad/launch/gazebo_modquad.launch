@@ -14,7 +14,7 @@
   <arg name="paused" default="false"/>
 
   <rosparam param="target_assembly">
-    [0,-1,2,-1,-1,  1,-1,-1,2,-1,  2,1,-1,-1,0]
+    [0,-1,1,-1,-1,  1,-1,2,-1,0,  2,-1,-1,-1,1]
   </rosparam>
   <!-- other test cases:
     [0,-1,2,-1,-1,  1,-1,-1,2,-1,  2,1,-1,-1,0]

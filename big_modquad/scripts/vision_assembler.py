@@ -16,19 +16,19 @@ class vision_assembler:
         self.waypoint_srvs = []
         self.dock_srvs = []
         self.track_srvs = []
-        self.filter_initializers = []
+        #self.filter_initializers = []
         self.track_directions = []
         self.face_directions = {0 : 0.0, 1 : 3*np.pi/2,
                                 2 : np.pi, 3 : np.pi/2,
                                 np.pi/2 : "left", 3*np.pi/2 : "right",
                                 np.pi : "forward"}
         self.tag_directions = {3*np.pi/2 : "left", np.pi/2 : "right", 
-                                0.0 : "forward", np.pi : "back"}
+                                0.0 : "back", np.pi : "forward"}
         for i in range(self.target_assembly.size/5):
             self.waypoint_srvs.append(rospy.ServiceProxy('/modquad' + str(i) + '/send_waypoint', sendwaypoint))
             self.dock_srvs.append(rospy.ServiceProxy('/modquad' + str(i) + '/dock', dock))
             self.track_srvs.append(rospy.ServiceProxy('/modquad' + str(i) + '/track', track))
-            self.filter_initializers.append(rospy.Publisher('/modquad' + str(i) + '/dock_side', String, queue_size=10))
+            #self.filter_initializers.append(rospy.Publisher('/modquad' + str(i) + '/dock_side', String, queue_size=10))
 
         rospy.init_node('modquad_vision_assembler')
         rate = rospy.Rate(2)
@@ -95,7 +95,7 @@ class vision_assembler:
                                     1.0,
                                     self.face_directions[available_face])
 
-        for it, srvs, filter_init in zip(IDs, self.waypoint_srvs, self.filter_initializers):
+        for it, srvs in zip(IDs, self.waypoint_srvs):
             if it == master:
                 continue
             dock_direction = np.where(raw_connections[it] != -1)[0][0]
@@ -104,8 +104,8 @@ class vision_assembler:
             tag_direction = dock_direction
             direction_wait_mod = np.where(raw_connections[wait_module] != -1)[0][0]
             #IMPORTANT: docking direction is in global reference frame
-            filter_init.publish(self.tag_directions[tag_direction])
-            self.track_directions.append(self.tag_directions[tag_direction])
+            #filter_init.publish(self.tag_directions[tag_direction])
+            #self.track_directions.append(self.tag_directions[tag_direction])
             rospy.loginfo("Module %d will dock to %s of module %d",
                         it, 
                         self.face_directions[dock_direction], 
