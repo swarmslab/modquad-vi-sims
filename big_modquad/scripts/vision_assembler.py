@@ -1,5 +1,8 @@
 #!/usr/bin/env python
 
+#!!!!!!DEPRECATED!!!!!!#
+#see vision_assembler_test.py for most recent assembly methodology
+
 import rospy
 import numpy as np
 import networkx as nx
