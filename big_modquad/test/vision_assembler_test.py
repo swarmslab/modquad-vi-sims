@@ -190,7 +190,7 @@ if __name__ == "__main__":
         }
 	G.add_edge(23,0)
 	'''
-	'''
+	#'''
 	#Bridges
         G = nx.Graph()
         G.add_nodes_from(list(range(40)))
@@ -291,8 +291,8 @@ if __name__ == "__main__":
         G.add_edge(38,36)
         G.add_edge(39,37)
         G.add_edge(39,38)
-	'''
 	#'''
+	'''
 	#Hole-in-middle
         G = nx.Graph()
         G.add_nodes_from(list(range(41)))
@@ -396,7 +396,7 @@ if __name__ == "__main__":
         G.add_edge(36,28)
         G.add_edge(38,25)
         G.add_edge(37,27)
-	#'''
+	'''
 
 	M = select_master() #for Hole-in-middle scenario, choose master 24
 	print("Master: {}".format(M))
@@ -408,11 +408,10 @@ if __name__ == "__main__":
 	print("Disassembly Sequence: {}".format(D))
 	labels = {}
 	color_map = [0] * len(G)
+	color_map[M] = 'lightgray'
 	for step in D:
 		labels[step[0]] = r"${}$".format(step[1])
 		color_map[step[0]] = color_node(step[1])
-	color_map[M] = 'lightgray'
-	print color_map
 	nx.draw_networkx(T_plt, pos, labels=labels, arrows=True, node_color=color_map, node_size=1000, node_shape="s")
 	plt.xlabel(r"$x$", fontsize = 14)
 	plt.ylabel(r"$y$", fontsize = 14)
