@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 from matplotlib import rc, animation
 import numpy as np
 import collections
+import time
 
 rc("text", usetex = True)
 
@@ -114,6 +115,7 @@ def sort_by_step(D):
 	return sorted(D, key = lambda dis: dis[1], reverse = True)
 
 def move(structures, candidates, D, T, pos, dt): #inefficient but whatever
+	global labels
 	if len(D) == 0:
 		return True
 	for m in candidates:
@@ -125,7 +127,9 @@ def move(structures, candidates, D, T, pos, dt): #inefficient but whatever
 				for n in s.nodes():
 					pos[n] = (pos[n][0] - diff[0]*dt, pos[n][1] - diff[1]*dt)
 		#if abs(diff[0]) < 0.33 and abs(diff[1]) < 0.33: #for Lattice
+		#int(labels[m].split("$")[1])
 		if abs(diff[0]) < 0.66 and abs(diff[1]) < 0.66: #for Loop
+		#if abs(diff[0]) < 0.92 and abs(diff[1]) < 0.92: #for Bridges
 			return True
 	return False
 
@@ -136,30 +140,41 @@ def update(i, structures, T, D, M, pos, color_map, ax, dt):
 	#ax.set_ylim([-1.0,3.0])
 	ax.set_xlim([-6.0,2.0]) #for Loop
 	ax.set_ylim([-1.0,7.0])
-
+	#ax.set_xlim([-9.0,2.0]) #for bridges
+	#ax.set_ylim([-1.0,10.0])
+	global labels
 	high = D[0][1] #max step
 	candidates = [k for k, v in D if v == high]
 	for c in candidates:
 		new_struct = True
 		for n in T[c].keys():
-			if n in structures.nodes():
+			if n in structures.nodes:
 				new_struct = False
 				structures.add_edge(c, n)
+				#if len(T[n]) > 0:
+				#	structures.add_edge(n, T[n].keys()[0])
 		if new_struct is True:
 			structures.add_node(c)
+			#if len(T[c]) > 0:
+			#	structures.add_edge(c, T[c].keys()[0])
 
 	done = move(structures, candidates, D, T, pos, dt)
 	if done is True:
+		for c in candidates:
+			if T.pred[c].keys()[0] in structures.nodes:
+				structures.add_edge(c, T.pred[c].keys()[0])
 		try:
 			current = D.pop(0)[1]
 			while D[0][1] == current:
 				D.pop(0)
 		except IndexError:
-			plt.close()
+			#plt.close()
+			time.sleep(200)
 		
-	nx.draw_networkx(T_plt, pos, with_labels=False, arrows=True, node_color=color_map, ax=ax, node_size=1000, node_shape="s")
+	#nx.draw_networkx(T_plt, pos, with_labels=False, arrows=True, node_color=color_map, ax=ax, node_size=1000, node_shape="s")
+	nx.draw_networkx(T_plt, pos, labels=labels, arrows=True, node_color=color_map, ax=ax, node_size=1000, node_shape="s")
 
-	ax.set_title("Frame {}".format(i))
+	#ax.set_title("Frame {}".format(i))
 
 def animate(T, D, M, pos, color_map):
 	fig, ax = plt.subplots(figsize=(7,7))
@@ -478,6 +493,8 @@ if __name__ == "__main__":
 	for step in D:
 		p = [i for i in T_plt.pred[step[0]]][0]
 		if p == M:
+			labels[step[0]] = r"${}$".format(step[1])#temporary
+			labels[M] = r"$0$"#temporary
 			color_map[step[0]] = "red"
 		else:
 			labels[step[0]] = r"${}$".format(step[1])
