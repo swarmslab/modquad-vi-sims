@@ -113,23 +113,42 @@ def flatten_remove(D, M):
 def sort_by_step(D):
 	return sorted(D, key = lambda dis: dis[1], reverse = True)
 
-def move(D, T, pos, dt): #inefficient but whatever
+def move(structures, candidates, D, T, pos, dt): #inefficient but whatever
 	if len(D) == 0:
 		return True
-	high = D[0][1] #max step
-	candidates = [(k,v) for k, v in D if v == high]
-	for k, v in candidates:
-		p = [i for i in T.pred[k]][0]
-		diff = tuple(xi - xd for xi, xd in zip(pos[k], pos[p]))
-		pos[k] = (pos[k][0] - diff[0]*dt, pos[k][1] - diff[1]*dt)
-		if abs(diff[0]) < 0.21 and abs(diff[1]) < 0.115:
+	for m in candidates:
+		p = [i for i in T.pred[m]][0]
+		diff = tuple(xi - xd for xi, xd in zip(pos[m], pos[p]))
+		sub_structs = nx.connected_component_subgraphs(structures)
+		for s in sub_structs:
+			if m in s:
+				for n in s.nodes():
+					pos[n] = (pos[n][0] - diff[0]*dt, pos[n][1] - diff[1]*dt)
+		#if abs(diff[0]) < 0.33 and abs(diff[1]) < 0.33: #for Lattice
+		if abs(diff[0]) < 0.66 and abs(diff[1]) < 0.66: #for Loop
 			return True
 	return False
 
-def update(i, T, D, M, pos, color_map, ax, dt):
+def update(i, structures, T, D, M, pos, color_map, ax, dt):
 	ax.clear()
+	ax.autoscale(enable=False)
+	#ax.set_xlim([-1.0,3.0]) #for Lattice
+	#ax.set_ylim([-1.0,3.0])
+	ax.set_xlim([-6.0,2.0]) #for Loop
+	ax.set_ylim([-1.0,7.0])
 
-	done = move(D, T, pos, dt)
+	high = D[0][1] #max step
+	candidates = [k for k, v in D if v == high]
+	for c in candidates:
+		new_struct = True
+		for n in T[c].keys():
+			if n in structures.nodes():
+				new_struct = False
+				structures.add_edge(c, n)
+		if new_struct is True:
+			structures.add_node(c)
+
+	done = move(structures, candidates, D, T, pos, dt)
 	if done is True:
 		try:
 			current = D.pop(0)[1]
@@ -146,7 +165,9 @@ def animate(T, D, M, pos, color_map):
 	fig, ax = plt.subplots(figsize=(7,7))
 	dt = 1./30
 
-	anim = animation.FuncAnimation(fig, update, interval=20, fargs=(T, D, M, pos, color_map, ax, dt), save_count=300)
+	structures = nx.Graph()
+	structures.add_nodes_from([k for k, v in D if v == D[0][1]])
+	anim = animation.FuncAnimation(fig, update, interval=20, fargs=(structures, T, D, M, pos, color_map, ax, dt), save_count=10000)
 
 	try:
 		plt.show()
@@ -169,7 +190,7 @@ def color_node(n):
 	return mapping.get(n, 'lightgray')
 
 if __name__ == "__main__":
-	#'''
+	'''
 	#Lattice
 	G = nx.Graph()
 	G.add_nodes_from(list(range(9)))
@@ -198,8 +219,8 @@ if __name__ == "__main__":
 	G.add_edge(4,1)
 	G.add_edge(5,2)
 	#G.add_edge(5,9)
-	#'''
 	'''
+	#'''
 	#Loop
 	G = nx.path_graph(24)
         pos = {
@@ -229,7 +250,7 @@ if __name__ == "__main__":
         23: (-1.0, 0.0),
         }
 	G.add_edge(23,0)
-	'''
+	#'''
 	'''
 	#Bridges
         G = nx.Graph()
