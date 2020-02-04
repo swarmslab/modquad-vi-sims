@@ -115,64 +115,96 @@ def sort_by_step(D):
 	return sorted(D, key = lambda dis: dis[1], reverse = True)
 
 def move(structures, candidates, D, T, pos, dt): #inefficient but whatever
-	global labels
+	global pos_orig
 	if len(D) == 0:
 		return True
-	for m in candidates:
-		p = [i for i in T.pred[m]][0]
-		diff = tuple(xi - xd for xi, xd in zip(pos[m], pos[p]))
+	done = [False] * len(candidates)
+	for i, m in enumerate(candidates):
+		p = T.pred[m].keys()[0]
+		diff = tuple(xi - xd for xi, xd in zip(pos[p], pos[m]))
+		#limit = 0.22 #for Lattice
+		#limit = 0.44 #for Loop
+		limit = 0.59 #for Bridges
+		if abs(diff[0]) < limit and abs(diff[1]) < limit: #for Loop
+			done[i] = True
 		sub_structs = nx.connected_component_subgraphs(structures)
 		for s in sub_structs:
 			if m in s:
 				for n in s.nodes():
-					pos[n] = (pos[n][0] - diff[0]*dt, pos[n][1] - diff[1]*dt)
-		#if abs(diff[0]) < 0.33 and abs(diff[1]) < 0.33: #for Lattice
-		#int(labels[m].split("$")[1])
-		if abs(diff[0]) < 0.66 and abs(diff[1]) < 0.66: #for Loop
-		#if abs(diff[0]) < 0.92 and abs(diff[1]) < 0.92: #for Bridges
-			return True
-	return False
+					x_p = 0.8
+					if abs(diff[0]) < limit and abs(diff[1]) < limit:
+						continue
+					if round(pos_orig[m][0]) == round(pos_orig[p][0]) and pos[p][0] - pos[m][0] > 0.04: #parent moved right
+						if pos[m][1] < pos[p][1]:
+							pos[n] = (pos[n][0] + (diff[0] + 1)*dt, pos[n][1] + (diff[1] - x_p)*dt)
+						if pos[m][1] > pos[p][1]:
+							pos[n] = (pos[n][0] + (diff[0] + 1)*dt, pos[n][1] + (diff[1] + x_p)*dt)
+					elif round(pos_orig[m][0]) == round(pos_orig[p][0]) and pos[m][0] > pos[p][0]: #parent moved left
+						if pos[m][1] < pos[p][1]:
+							pos[n] = (pos[n][0] + (diff[0] - 1)*dt, pos[n][1] + (diff[1] - x_p)*dt)
+						if pos[m][1] > pos[p][1]:
+							pos[n] = (pos[n][0] + (diff[0] - 1)*dt, pos[n][1] + (diff[1] + x_p)*dt)
+					elif round(pos_orig[m][1]) == round(pos_orig[p][1]) and pos[p][1] - pos[m][1] > 0.04: #parent moved up
+						if pos[m][0] < pos[p][0]:
+							pos[n] = (pos[n][0] + (diff[0] - x_p)*dt, pos[n][1] + (diff[1] + 1)*dt)
+						if pos[m][0] > pos[p][0]:
+							pos[n] = (pos[n][0] + (diff[0] + x_p)*dt, pos[n][1] + (diff[1] + 1)*dt)
+					elif round(pos_orig[m][1]) == round(pos_orig[p][1]) and pos[m][1] > pos[p][1]: #parent moved down
+						if pos[m][0] < pos[p][0]:
+							pos[n] = (pos[n][0] + (diff[0] - x_p)*dt, pos[n][1] + (diff[1] - 1)*dt)
+						if pos[m][0] > pos[p][0]:
+							pos[n] = (pos[n][0] + (diff[0] + x_p)*dt, pos[n][1] + (diff[1] - 1)*dt)
+					else:
+						pos[n] = (pos[n][0] + diff[0]*dt, pos[n][1] + diff[1]*dt)
+	return done
 
 def update(i, structures, T, D, M, pos, color_map, ax, dt):
 	ax.clear()
 	ax.autoscale(enable=False)
+	global labels
 	#ax.set_xlim([-1.0,3.0]) #for Lattice
 	#ax.set_ylim([-1.0,3.0])
-	ax.set_xlim([-6.0,2.0]) #for Loop
-	ax.set_ylim([-1.0,7.0])
-	#ax.set_xlim([-9.0,2.0]) #for bridges
-	#ax.set_ylim([-1.0,10.0])
-	global labels
+	#ax.set_xlim([-6.0,2.0]) #for Loop
+	#ax.set_ylim([-1.0,7.0])
+	ax.set_xlim([-9.0,2.0]) #for Bridges
+	ax.set_ylim([-1.0,10.0])
 	high = D[0][1] #max step
 	candidates = [k for k, v in D if v == high]
+	cand_filter = []
 	for c in candidates:
+		m_t = labels[c].split("$")[1]
+		p = T.pred[c].keys()[0]
+		if m_t == labels[p].split("$")[1] and p in [k for k, v in D]:
+			continue
 		new_struct = True
 		for n in T[c].keys():
 			if n in structures.nodes:
 				new_struct = False
 				structures.add_edge(c, n)
-				#if len(T[n]) > 0:
-				#	structures.add_edge(n, T[n].keys()[0])
 		if new_struct is True:
 			structures.add_node(c)
-			#if len(T[c]) > 0:
-			#	structures.add_edge(c, T[c].keys()[0])
+		cand_filter.append(c)
 
+	skipped = list(set(candidates) - set(cand_filter))
+	candidates = cand_filter
 	done = move(structures, candidates, D, T, pos, dt)
-	if done is True:
+	if all(done) is True:
 		for c in candidates:
 			if T.pred[c].keys()[0] in structures.nodes:
 				structures.add_edge(c, T.pred[c].keys()[0])
 		try:
 			current = D.pop(0)[1]
 			while D[0][1] == current:
-				D.pop(0)
+				m = D.pop(0)
+				if m in skipped:
+					D.append(m)
+			D = sort_by_step(D)
 		except IndexError:
 			#plt.close()
 			time.sleep(200)
 		
-	#nx.draw_networkx(T_plt, pos, with_labels=False, arrows=True, node_color=color_map, ax=ax, node_size=1000, node_shape="s")
-	nx.draw_networkx(T_plt, pos, labels=labels, arrows=True, node_color=color_map, ax=ax, node_size=1000, node_shape="s")
+	nx.draw_networkx(T_plt, pos, with_labels=False, arrows=True, node_color=color_map, ax=ax, node_size=400, node_shape="s")
+	#nx.draw_networkx(T_plt, pos, labels=labels, arrows=True, node_color=color_map, ax=ax, node_size=1000, node_shape="s")
 
 	#ax.set_title("Frame {}".format(i))
 
@@ -186,7 +218,7 @@ def animate(T, D, M, pos, color_map):
 
 	try:
 		plt.show()
-		#anim.save('animation.mp4', fps=30, extra_args=["-vcodec","libx264"])
+		#anim.save('bridges.mp4', fps=30, extra_args=["-vcodec","libx264"])
 	except AttributeError:
 		pass
 
@@ -235,7 +267,7 @@ if __name__ == "__main__":
 	G.add_edge(5,2)
 	#G.add_edge(5,9)
 	'''
-	#'''
+	'''
 	#Loop
 	G = nx.path_graph(24)
         pos = {
@@ -265,8 +297,8 @@ if __name__ == "__main__":
         23: (-1.0, 0.0),
         }
 	G.add_edge(23,0)
-	#'''
 	'''
+	#'''
 	#Bridges
         G = nx.Graph()
         G.add_nodes_from(list(range(40)))
@@ -372,7 +404,7 @@ if __name__ == "__main__":
         G.add_edge(35,36)
         G.add_edge(39,37)
         G.add_edge(39,35)
-	'''
+	#'''
 	'''
 	#Hole-in-middle
         G = nx.Graph()
@@ -490,6 +522,7 @@ if __name__ == "__main__":
 	labels = {}
 	color_map = [0] * len(G)
 	color_map[M] = 'lightgray'
+	pos_orig = {k: v for k, v in pos.items()}
 	for step in D:
 		p = [i for i in T_plt.pred[step[0]]][0]
 		if p == M:
