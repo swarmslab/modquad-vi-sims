@@ -128,13 +128,12 @@ def move(structures, candidates, D, T, pos, dt): #inefficient but whatever
 		#limit = 0.54 #for Hole-in-middle
 		if abs(diff[0]) < limit and abs(diff[1]) < limit: #for Loop
 			done[i] = True
+			continue
 		sub_structs = nx.connected_component_subgraphs(structures)
 		for s in sub_structs:
 			if m in s:
 				for n in s.nodes():
 					x_p = 0.8
-					if abs(diff[0]) < limit and abs(diff[1]) < limit:
-						continue
 					if round(pos_orig[m][0]) == round(pos_orig[p][0]) and pos[p][0] - pos[m][0] > 0.04: #parent moved right
 						if pos[m][1] < pos[p][1]:
 							pos[n] = (pos[n][0] + (diff[0] + 1)*dt, pos[n][1] + (diff[1] - x_p)*dt)
@@ -162,7 +161,7 @@ def move(structures, candidates, D, T, pos, dt): #inefficient but whatever
 def update(i, structures, T, D, M, pos, color_map, ax, dt):
 	ax.clear()
 	ax.autoscale(enable=False)
-	global labels
+	global labels, pos_orig
 	#ax.set_xlim([-1.0,3.0]) #for Lattice
 	#ax.set_ylim([-1.0,3.0])
 	#ax.set_xlim([-6.0,2.0]) #for Loop
@@ -181,17 +180,40 @@ def update(i, structures, T, D, M, pos, color_map, ax, dt):
 		cand_filter.append(c)
 
 	skipped = list(set(candidates) - set(cand_filter))
+	reverse = []
+	reverse_skip = []
 	check = len(cand_filter) > 0
 	if check:
 		candidates = cand_filter
-	for c in candidates:
+	for i, c in enumerate(candidates):
+		reversal = False
+		try:
+			m_t = labels[c].split("$")[1]
+			p = T.pred[c].keys()[0]
+			child = T[c].keys()[0]
+			child_child = T[child].keys()[0]
+			diff = tuple(xi - xd for xi, xd in zip(pos_orig[p], pos_orig[child]))
+			diff_n = tuple(xi - xd for xi, xd in zip(pos[c], pos[child]))
+			diff2 = tuple(xi - xd for xi, xd in zip(pos[child], pos[child_child]))
+			if m_t > labels[child].split("$")[1] and abs(diff[0]) > 0.7 and abs(diff[1]) > 0.7 and np.sqrt(diff_n[0]**2 + diff_n[1]**2) > 0.59:
+				if np.sqrt(diff2[0]**2 + diff2[1]**2) > 0.6:
+					continue
+
+				reverse.append(child)
+				reverse_skip.append(c)
+				reversal = True
+				c = child
+		except IndexError:
+			pass
 		new_struct = True
 		for n in T[c].keys():
-			if n in structures.nodes:
+			if n in structures.nodes and reversal != True:
 				new_struct = False
 				structures.add_edge(c, n)
 		if new_struct is True:
 			structures.add_node(c)
+	candidates.extend(reverse)
+	candidates = [n for n in candidates if n not in reverse_skip]
 	done = move(structures, candidates, D, T, pos, dt)
 	if all(done) is True:
 		for c in candidates:
@@ -203,12 +225,14 @@ def update(i, structures, T, D, M, pos, color_map, ax, dt):
 				m = D.pop(0)
 				if m[0] in skipped and check:
 					D.append(m)
+				if m[0] in reverse_skip and check:
+					D.append(m)
 			D = sort_by_step(D)
 		except IndexError:
 			#plt.close()
 			time.sleep(200)
 		
-	nx.draw_networkx(T_plt, pos, with_labels=False, arrows=True, node_color=color_map, ax=ax, node_size=400, node_shape="s")
+	nx.draw_networkx(T_plt, pos, with_labels=True, arrows=True, node_color=color_map, ax=ax, node_size=400, node_shape="s")
 	#nx.draw_networkx(T_plt, pos, labels=labels, arrows=True, node_color=color_map, ax=ax, node_size=1000, node_shape="s")
 
 	#ax.set_title("Frame {}".format(i))
@@ -306,7 +330,7 @@ if __name__ == "__main__":
 	#'''
 	#Bridges
         G = nx.Graph()
-        G.add_nodes_from(list(range(40)))
+        G.add_nodes_from(list(range(41)))
         pos = {
         0: (0.0, 0.0),
         1: (-3.0, 0.0),
