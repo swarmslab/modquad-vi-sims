@@ -185,6 +185,7 @@ def update(i, structures, T, D, M, pos, color_map, ax, dt):
 	check = len(cand_filter) > 0
 	if check:
 		candidates = cand_filter
+	#print("candidates before {}".format(candidates))
 	for i, c in enumerate(candidates):
 		reversal = False
 		try:
@@ -196,13 +197,22 @@ def update(i, structures, T, D, M, pos, color_map, ax, dt):
 			diff_n = tuple(xi - xd for xi, xd in zip(pos[c], pos[child]))
 			diff2 = tuple(xi - xd for xi, xd in zip(pos[child], pos[child_child]))
 			if m_t > labels[child].split("$")[1] and abs(diff[0]) > 0.7 and abs(diff[1]) > 0.7 and np.sqrt(diff_n[0]**2 + diff_n[1]**2) > 0.59:
-				if np.sqrt(diff2[0]**2 + diff2[1]**2) > 0.6:
+				if np.sqrt(diff2[0]**2 + diff2[1]**2) > 0.69:
 					continue
+				#structures.add_edge(child, child_child)
+				print("c: {} child: {} child_child: {} p: {}, diff2: {}".format(c, child, child_child, p, np.sqrt(diff2[0]**2 + diff2[1]**2)))
+				#c: 8 child: 7 child_child: 6 p: 17
+				#c: 11 child: 12 child_child: 13 p: 20
 
+
+				#skipped.append(c)
 				reverse.append(child)
+				#labels[child] = r"${}$".format(m_t)
 				reverse_skip.append(c)
 				reversal = True
 				c = child
+			if c == 11:
+				pos[14] = (pos[13][0] - 0.59, pos[13][1])
 		except IndexError:
 			pass
 		new_struct = True
@@ -212,9 +222,17 @@ def update(i, structures, T, D, M, pos, color_map, ax, dt):
 				structures.add_edge(c, n)
 		if new_struct is True:
 			structures.add_node(c)
+	#print np.random.random()
+	#print("reverse {}".format(reverse))
+	#print("reverse_skip {}".format(reverse_skip))
+	for i,s in enumerate(nx.connected_component_subgraphs(structures)):
+		print("struct {}, nodes: {}".format(i, s.nodes))
 	candidates.extend(reverse)
 	candidates = [n for n in candidates if n not in reverse_skip]
+	#print("candidates after {}".format(candidates))
 	done = move(structures, candidates, D, T, pos, dt)
+	#print done
+	#print D
 	if all(done) is True:
 		for c in candidates:
 			if T.pred[c].keys()[0] in structures.nodes:
@@ -226,7 +244,9 @@ def update(i, structures, T, D, M, pos, color_map, ax, dt):
 				if m[0] in skipped and check:
 					D.append(m)
 				if m[0] in reverse_skip and check:
+				#	m = (m[0], m[1] - 1)
 					D.append(m)
+			#D = [(k,v) for k,v in D if k not in reverse]
 			D = sort_by_step(D)
 		except IndexError:
 			#plt.close()
