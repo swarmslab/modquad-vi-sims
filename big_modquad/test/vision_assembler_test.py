@@ -124,7 +124,8 @@ def move(structures, candidates, D, T, pos, dt): #inefficient but whatever
 		diff = tuple(xi - xd for xi, xd in zip(pos[p], pos[m]))
 		#limit = 0.22 #for Lattice
 		#limit = 0.44 #for Loop
-		limit = 0.59 #for Bridges
+		#limit = 0.59 #for Bridges
+		limit = 0.54 #for Hole-in-middle
 		if abs(diff[0]) < limit and abs(diff[1]) < limit: #for Loop
 			done[i] = True
 		sub_structs = nx.connected_component_subgraphs(structures)
@@ -166,16 +167,26 @@ def update(i, structures, T, D, M, pos, color_map, ax, dt):
 	#ax.set_ylim([-1.0,3.0])
 	#ax.set_xlim([-6.0,2.0]) #for Loop
 	#ax.set_ylim([-1.0,7.0])
-	ax.set_xlim([-9.0,2.0]) #for Bridges
-	ax.set_ylim([-1.0,10.0])
+	#ax.set_xlim([-9.0,2.0]) #for Bridges
+	#ax.set_ylim([-1.0,10.0])
+	ax.set_xlim([-6.0,4.0]) #for Hole-in-middle
+	ax.set_ylim([-2.0,8.0])
 	high = D[0][1] #max step
 	candidates = [k for k, v in D if v == high]
 	cand_filter = []
+	#print("D: {}, candidates: {}".format(D, candidates))
 	for c in candidates:
 		m_t = labels[c].split("$")[1]
 		p = T.pred[c].keys()[0]
-		if m_t == labels[p].split("$")[1] and p in [k for k, v in D]:
+		if m_t == labels[p].split("$")[1]:# and p in structures.nodes: 
 			continue
+		cand_filter.append(c)
+
+	skipped = list(set(candidates) - set(cand_filter))
+	check = len(cand_filter) > 0
+	if check:
+		candidates = cand_filter
+	for c in candidates:
 		new_struct = True
 		for n in T[c].keys():
 			if n in structures.nodes:
@@ -183,10 +194,6 @@ def update(i, structures, T, D, M, pos, color_map, ax, dt):
 				structures.add_edge(c, n)
 		if new_struct is True:
 			structures.add_node(c)
-		cand_filter.append(c)
-
-	skipped = list(set(candidates) - set(cand_filter))
-	candidates = cand_filter
 	done = move(structures, candidates, D, T, pos, dt)
 	if all(done) is True:
 		for c in candidates:
@@ -196,7 +203,8 @@ def update(i, structures, T, D, M, pos, color_map, ax, dt):
 			current = D.pop(0)[1]
 			while D[0][1] == current:
 				m = D.pop(0)
-				if m in skipped:
+				if m[0] in skipped and check:
+					print m
 					D.append(m)
 			D = sort_by_step(D)
 		except IndexError:
@@ -298,7 +306,7 @@ if __name__ == "__main__":
         }
 	G.add_edge(23,0)
 	'''
-	#'''
+	'''
 	#Bridges
         G = nx.Graph()
         G.add_nodes_from(list(range(40)))
@@ -318,6 +326,7 @@ if __name__ == "__main__":
         12: (-6.0, 2.0),
         13: (-7.0, 2.0),
         14: (-8.0, 2.0),
+        40: (-8.0, 1.0),
         15: (0.0, 3.0),
         16: (-1.0, 3.0),
         17: (-2.0, 3.0),
@@ -349,6 +358,7 @@ if __name__ == "__main__":
         35: (-1.0, 9.0),
         39: (-2.0, 9.0),
         }
+        G.add_edge(14,40)
         G.add_edge(0,3)
         G.add_edge(1,4)
         G.add_edge(1,2)
@@ -404,8 +414,8 @@ if __name__ == "__main__":
         G.add_edge(35,36)
         G.add_edge(39,37)
         G.add_edge(39,35)
-	#'''
 	'''
+	#'''
 	#Hole-in-middle
         G = nx.Graph()
         G.add_nodes_from(list(range(41)))
@@ -509,9 +519,9 @@ if __name__ == "__main__":
         G.add_edge(36,28)
         G.add_edge(38,25)
         G.add_edge(37,27)
-	'''
+	#'''
 
-	M = select_master() #for Hole-in-middle scenario, choose master 12
+	M = 12#select_master() #for Hole-in-middle scenario, choose master 12
 	print("Master: {}".format(M))
 	T = assembly_tree(G, M)
 	T_plt = T.copy()
