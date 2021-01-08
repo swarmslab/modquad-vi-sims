@@ -18,4 +18,4 @@ In addition, for the simulation you must change whycon's parameters. Go to where
 
 For simulation, make sure to ```git checkout experimental-sim``` and then compile the firmware with ```DONT_RUN=1 make px4_sitl_default gazebo```
 
-TODO: Describe setup for simulation and/or hardware AND usage
+**Note**: This is still a work in progress.
