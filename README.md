@@ -19,6 +19,6 @@ export GAZEBO_RESOURCE_PATH=${GAZEBO_RESOURCE_PATH}:/path/to/your/catkin_ws/src/
 
 In addition, for the simulation you must change whycon's parameters. Go to wherever you installed whycon and edit include/whycon/circle_detector.h. Uncomment the default inner and outer diameters and put ```inner_diameter = 0.087``` and ```outer_diameter = 0.135``` for proper whycon tag distance in Gazebo.
 
-For simulation, make sure to ```git checkout experimental-sim``` and then compile the firmware with ```DONT_RUN=1 make px4_sitl_default gazebo```
+For simulation, make sure to ```git clone https://github.com/yehonathanlitman/Firmware```, ```git checkout experimental-sim``` and then compile the firmware with ```DONT_RUN=1 make px4_sitl_default gazebo```
 
 
