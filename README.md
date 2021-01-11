@@ -1,4 +1,7 @@
 # big_modquad
+
+**Note**: This is still a work in progress.
+
 All of the repos for both SITL and actual flying are contained here. Enjoy!
 
 For Gazebo simulations, put these lines in your .bashrc:
@@ -18,4 +21,4 @@ In addition, for the simulation you must change whycon's parameters. Go to where
 
 For simulation, make sure to ```git checkout experimental-sim``` and then compile the firmware with ```DONT_RUN=1 make px4_sitl_default gazebo```
 
-**Note**: This is still a work in progress.
+
