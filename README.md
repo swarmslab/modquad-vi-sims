@@ -1,4 +1,4 @@
-# big_modquad
+# modquad-vi-sims
 
 **Note**: This is still a work in progress.
 
