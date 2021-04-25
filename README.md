@@ -1,6 +1,6 @@
 # modquad-vi-sims
 
-**Note**: This is still a work in progress.
+**Note**: This is still a work in progress. Some of the code may not run well!
 
 All of the repos for both SITL and actual flying are contained here. Enjoy!
 
